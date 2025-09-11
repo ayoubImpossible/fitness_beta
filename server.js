@@ -13,6 +13,7 @@ const protectedRoutes = require('./src/router/protected');
 const savedcategoryRouter = require('./src/router/savedRouter');
 const profileRouter=require('./src/router/profileRouter')
 const searchRouter=require('./src/router/searchRouter')
+const AiRouter=require('./src/router/aiRouter')
 
 
 const helmet =require('helmet') ;
@@ -21,6 +22,7 @@ const cookieParser =require( 'cookie-parser') ;
 
 const cors = require('cors');
 const verifyToken = require('./src/Utils/VerifyToken');
+const { db } = require('./src/Firebase/firebaseAdmin');
 const app=express();
 
 
@@ -40,6 +42,21 @@ app.use(cookieParser());
 
 app.disable('x-powered-by');
 app.use('/api/exercises', exerciseRoutes);
+
+// app.get('/test',(req,res)=>{
+
+//   const test = async () => {
+//   try {
+//     const snapshot = await db.collectionGroup("videos").limit(1).get();
+//     console.log("Docs found:", snapshot.size);
+//   } catch (err) {
+//     console.error("Test query failed:", err);
+//   }
+// };
+
+// test();
+
+// });
 app.use('/api/users', userRoutes);    
 app.use('/api/categorie', categorieRoutes); 
 app.use('/api/video', levelRoutes);
@@ -53,6 +70,8 @@ app.use('/api/protected',protectedRoutes);
 app.use('/api',savedcategoryRouter);
 app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
+app.use('/api/Ai',AiRouter)
+
 
 
 

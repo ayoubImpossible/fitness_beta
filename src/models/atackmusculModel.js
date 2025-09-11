@@ -1,4 +1,4 @@
-const { db, admin } = require('../Firebase/firebaseAdmin');
+const { db } = require('../Firebase/firebaseAdmin');
 /*const atackRef = (exerciceId) => db.collection('categories').doc(exerciceId).collection('exercises').
 doc(exerciceId).collection('atack');*/
 const categoriesRef = (typeId) => db.collection('types').doc(typeId).collection('categories');

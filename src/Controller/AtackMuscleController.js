@@ -154,6 +154,8 @@ const { addAtack_To_Exercice, getAllAtacks, getAtackById, update_Atack_In_Exerci
   };
 
 
+
+  
    // Get all atacks for a exercice
    const getAllAtacksHandler_2 = async (req, res) => {
     const atacks = await getAllAtacks_2();
