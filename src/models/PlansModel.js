@@ -9,16 +9,6 @@ const addPlanToDB = async (userId, planData) => {
     userId,
   });
 
-  // Add a notification for the created plan
-  const notificationRef = db.collection('notifications');
-  await notificationRef.add({
-    message: `A new plan "${planData.name}" has been created.`,
-    planId: planDoc.id,
-    type: 'plan',
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    isRead: false,
-  });
-
   return { id: planDoc.id, ...planData };
 };
 
