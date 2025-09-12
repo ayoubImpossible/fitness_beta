@@ -132,72 +132,28 @@ const getAllDurationsTypes = async (exerciceId) => {
 
 
 // optimisé done 🆗
-// const getAllVid = async () => {
-//   try {
-//     const videosSnapshot = await db.collectionGroup('videos').get();
-
-//     if (videosSnapshot.empty) {
-//       console.log('No videos found');
-//       return [];
-//     }
-
-//     return videosSnapshot.docs.map((doc) => ({
-//       id: doc.id,
-//       path: doc.ref.path, 
-//       ...doc.data(),
-//     }));
-//   } catch (error) {
-//     console.error('Error fetching all videos:', error);
-//     return [];
-//   }
-// };
-
-
 const getAllVid = async () => {
   try {
-    const typesSnapshot = await db.collection('types').get(); // Fetch all types
-    let allVideos = [];
+    const videosSnapshot = await db.collectionGroup('videos').get();
 
-    const categoryPromises = typesSnapshot.docs.map(async (typeDoc) => {
-      const categoriesSnapshot = await typeDoc.ref.collection('categories').get();
+    if (videosSnapshot.empty) {
+      console.log('No videos found');
+      return [];
+    }
 
-      const exercisePromises = categoriesSnapshot.docs.map(async (categoryDoc) => {
-        const exercisesSnapshot = await categoryDoc.ref.collection('exercises').get();
-
-        const atackPromises = exercisesSnapshot.docs.map(async (exerciseDoc) => {
-          const atackCollections = await exerciseDoc.ref.collection('atack').get();
-
-          const levelPromises = atackCollections.docs.map(async (atackDoc) => {
-            const levelCollections = await atackDoc.ref.collection('levels').get();
-
-            const videoPromises = levelCollections.docs.map(async (levelDoc) => {
-              const videosSnapshot = await levelDoc.ref.collection('videos').get();
-
-              return videosSnapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            });
-
-            return (await Promise.all(videoPromises)).flat();
-          });
-
-          return (await Promise.all(levelPromises)).flat();
-        });
-
-        return (await Promise.all(atackPromises)).flat();
-      });
-
-      return (await Promise.all(exercisePromises)).flat();
-    });
-
-    allVideos = (await Promise.all(categoryPromises)).flat();
-    return allVideos;
+    return videosSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      path: doc.ref.path, 
+      ...doc.data(),
+    }));
   } catch (error) {
     console.error('Error fetching all videos:', error);
     return [];
   }
 };
+
+
+
 
 
 module.exports = {
