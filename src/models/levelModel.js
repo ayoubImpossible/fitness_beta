@@ -186,49 +186,22 @@ const getAllVideosByL = async (typeId, categoryId, exerciseId, Level) => {
 
 const getAllVideosByDifficulty = async (difficulty) => {
   try {
-    const typesSnapshot = await db.collection('types').get();
-    const videoPromises = typesSnapshot.docs.map(async (typeDoc) => {
-      const categoriesSnapshot = await typeDoc.ref.collection('categories').get();
+    const videosSnapshot = await db.collectionGroup('videos')
+      .where('difficulty', '==', difficulty)
+      .get();
 
-      const categoryPromises = categoriesSnapshot.docs.map(async (categoryDoc) => {
-        const exercisesSnapshot = await categoryDoc.ref.collection('exercises').get();
+    const allVideos = videosSnapshot.docs.map(videoDoc => ({
+      id: videoDoc.id,
+      ...videoDoc.data(),
+    }));
 
-        const exercisePromises = exercisesSnapshot.docs.map(async (exerciseDoc) => {
-          const atackSnapshot = await exerciseDoc.ref.collection('atack').get();
-
-          const atackPromises = atackSnapshot.docs.map(async (atackDoc) => {
-            const levelsSnapshot = await atackDoc.ref.collection('levels').get();
-
-            const levelPromises = levelsSnapshot.docs.map(async (levelDoc) => {
-              const videosSnapshot = await levelDoc.ref.collection('videos')
-                .where('difficulty', '==', difficulty)
-                .get();
-
-              return videosSnapshot.docs.map(videoDoc => ({
-                id: videoDoc.id,
-                ...videoDoc.data(),
-              }));
-            });
-
-            return (await Promise.all(levelPromises)).flat();
-          });
-
-          return (await Promise.all(atackPromises)).flat();
-        });
-
-        return (await Promise.all(exercisePromises)).flat();
-      });
-
-      return (await Promise.all(categoryPromises)).flat();
-    });
-
-    const allVideos = (await Promise.all(videoPromises)).flat();
     return allVideos;
   } catch (error) {
     console.error("Error fetching videos by difficulty:", error);
     return [];
   }
 };
+
 
 
 
