@@ -89,14 +89,14 @@ const getAllDurationsTypes_2 = async () => {
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.duration) {
-        durationSet.add(data.duration);
+      if (data.difficulty) {
+        durationSet.add(data.difficulty);
       }
     });
 
     return Array.from(durationSet); 
   } catch (error) {
-    console.error('Error fetching all duration types:', error);
+    console.error('Error fetching all difficulty types:', error);
     throw error;
   }
 };
