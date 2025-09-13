@@ -8,6 +8,7 @@ const getAllTypes = async () => {
   const snapshot = await typesRef.get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
+
 const addType = async (typeData) => {
     const typeDoc = await typesRef.add(typeData);
     return { id: typeDoc.id, ...typeData };

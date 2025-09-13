@@ -75,56 +75,86 @@ const delete_Atack_From_Database = async (typeId,categoryId,exerciseId,atackId) 
 };
 
 
+// const getVideosByMuscleAttack = async (muscleAttack) => {
+//   try {
+//     const typesSnapshot = await db.collection('types').get(); // Fetch all types
+//     let allVideos = [];
+
+//     const typePromises = typesSnapshot.docs.map(async (typeDoc) => {
+//       const categoriesSnapshot = await typeDoc.ref.collection('categories').get();
+
+//       const categoryPromises = categoriesSnapshot.docs.map(async (categoryDoc) => {
+//         const exercisesSnapshot = await categoryDoc.ref.collection('exercises').get();
+
+//         const exercisePromises = exercisesSnapshot.docs.map(async (exerciseDoc) => {
+//           const atackSnapshot = await exerciseDoc.ref.collection('atack')
+//             .where('muscleAttack', '==', muscleAttack) // Filter by muscleAttack
+//             .get();
+
+//           const atackPromises = atackSnapshot.docs.map(async (atackDoc) => {
+//             const levelSnapshot = await atackDoc.ref.collection('levels').get();
+
+//             const videoPromises = levelSnapshot.docs.map(async (levelDoc) => {
+//               const videoSnapshot = await levelDoc.ref.collection('videos').get();
+              
+//               return videoSnapshot.docs.map((videoDoc) => ({
+//                 id: videoDoc.id,
+//                 ...videoDoc.data()
+//               }));
+//             });
+
+//             // Collect all videos from this atack and push them to allVideos
+//             const videos = await Promise.all(videoPromises);
+//             allVideos.push(...videos.flat()); // Flatten and push to allVideos
+//           });
+
+//           return await Promise.all(atackPromises);
+//         });
+
+//         return (await Promise.all(exercisePromises)).flat();
+//       });
+
+//       return (await Promise.all(categoryPromises)).flat();
+//     });
+
+//     await Promise.all(typePromises); // Ensure all promises resolve
+//     return allVideos; // Return the list of all videos
+//   } catch (error) {
+//     console.error('Error fetching videos by muscleAttack:', error);
+//     return [];
+//   }
+// };
+
+
+
 const getVideosByMuscleAttack = async (muscleAttack) => {
   try {
-    const typesSnapshot = await db.collection('types').get(); // Fetch all types
-    let allVideos = [];
+    // 1️⃣ Get all atack docs matching the muscleAttack
+    const atackSnapshot = await db.collectionGroup('atack')
+      .where('muscleAttack', '==', muscleAttack)
+      .get();
 
-    const typePromises = typesSnapshot.docs.map(async (typeDoc) => {
-      const categoriesSnapshot = await typeDoc.ref.collection('categories').get();
+    if (atackSnapshot.empty) return [];
 
-      const categoryPromises = categoriesSnapshot.docs.map(async (categoryDoc) => {
-        const exercisesSnapshot = await categoryDoc.ref.collection('exercises').get();
+    // 2️⃣ Collect all atack IDs
+    const atackIds = atackSnapshot.docs.map(doc => doc.id);
 
-        const exercisePromises = exercisesSnapshot.docs.map(async (exerciseDoc) => {
-          const atackSnapshot = await exerciseDoc.ref.collection('atack')
-            .where('muscleAttack', '==', muscleAttack) // Filter by muscleAttack
-            .get();
+    // 3️⃣ Query videos by atackId (across all levels)
+    const videosSnapshot = await db.collectionGroup('videos')
+      .where('atackId', 'in', atackIds) // Firestore 'in' supports max 10 IDs, see note below
+      .get();
 
-          const atackPromises = atackSnapshot.docs.map(async (atackDoc) => {
-            const levelSnapshot = await atackDoc.ref.collection('levels').get();
+    const allVideos = videosSnapshot.docs.map(videoDoc => ({
+      id: videoDoc.id,
+      ...videoDoc.data(),
+    }));
 
-            const videoPromises = levelSnapshot.docs.map(async (levelDoc) => {
-              const videoSnapshot = await levelDoc.ref.collection('videos').get();
-              
-              return videoSnapshot.docs.map((videoDoc) => ({
-                id: videoDoc.id,
-                ...videoDoc.data()
-              }));
-            });
-
-            // Collect all videos from this atack and push them to allVideos
-            const videos = await Promise.all(videoPromises);
-            allVideos.push(...videos.flat()); // Flatten and push to allVideos
-          });
-
-          return await Promise.all(atackPromises);
-        });
-
-        return (await Promise.all(exercisePromises)).flat();
-      });
-
-      return (await Promise.all(categoryPromises)).flat();
-    });
-
-    await Promise.all(typePromises); // Ensure all promises resolve
-    return allVideos; // Return the list of all videos
+    return allVideos;
   } catch (error) {
     console.error('Error fetching videos by muscleAttack:', error);
     return [];
   }
 };
-
 
 
 // Search exercises by name
