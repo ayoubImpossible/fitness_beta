@@ -1,5 +1,5 @@
 const { db } = require("../Firebase/firebaseAdmin");
-const { getAllEquipmentTypes, getAllDurationsTypes, getAllVid, getAllDurationsTypes_2, getAllEquipmentTypes_2, getAllVideosByDuration, getAllVideosByeq } = require("../models/getVideoBy");
+const { getAllEquipmentTypes, getAllDurationsTypes, getAllVid, getAllDurationsTypes_2, getAllEquipmentTypes_2, getAllVideosByDuration, getAllVideosByeq, getAllVideosBylevel } = require("../models/getVideoBy");
 
 
 
