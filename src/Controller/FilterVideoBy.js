@@ -41,8 +41,9 @@ const getAllVideoBylevel = async (req, res) => {
             res.status(500).json({ error: error.message });
           }
   };
-//get all equipments
-const getAllEquipment=async(req,res)=>{
+
+
+  const getAllEquipment=async(req,res)=>{
   const{exerciceId}=req.params;
        try{
         const equipment = await getAllEquipmentTypes(exerciceId);
@@ -71,7 +72,8 @@ const getAllDuration=async(req,res)=>{
         res.status(500).json({error:error.message});
        }
 }
-//get all duration
+
+
 const getAllDuration_2=async(req,res)=>{
        try{
         const durations = await getAllDurationsTypes_2();
@@ -80,15 +82,15 @@ const getAllDuration_2=async(req,res)=>{
         res.status(500).json({error:error.message});
        }
 }
-//get All Categories in db
+
+
 const getAllVideosHandler = async (req, res) => {
   try {
-    const videos = await getAllVid(); // Call the function to get all categories
-    
+    const videos = await getAllVid(); 
     if (videos && videos.length > 0) {
-      res.status(200).json(videos); // Return the categories as a JSON response
+      res.status(200).json(videos); 
     } else {
-      res.status(404).json({ message: "No categories found" }); // Handle case when no categories are found
+      res.status(404).json({ message: "No categories found" }); 
     }
   } catch (error) {
     console.error("Error in getCategories controller:", error);

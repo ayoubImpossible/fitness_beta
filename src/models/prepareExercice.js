@@ -3,14 +3,12 @@ const { db } = require("../Firebase/firebaseAdmin");
 
 const PreparerExercice=db.collection('PreparerExercices')
 
-// Add Type
 const addPrepareExercice = async (Data) => {
     const ExercicePreparerDoc = await PreparerExercice.add(Data);
     return { id: ExercicePreparerDoc.id, ...Data };
   };
 
 
-  // Get PrepareExercices by position
 const getPrepareExercicesByPosition = async (position) => {
   try {
     let query = PreparerExercice.where("position", "==", position);
@@ -19,7 +17,6 @@ const getPrepareExercicesByPosition = async (position) => {
     if (snapshot.empty) {
       return [];
     }
-
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -28,7 +25,6 @@ const getPrepareExercicesByPosition = async (position) => {
     throw new Error("Error fetching PrepareExercices: " + error.message);
   }
 };
-
 
 const addVideoToPrepareExercice = async (exerciceId, videoData) => {
   try {
@@ -58,7 +54,6 @@ const getVideosForPrepareExercice = async (exerciceId) => {
     if (snapshot.empty) {
       return [];
     }
-
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -77,7 +72,6 @@ const getPrepareExerciceById=async(exerciceId)=>{
     if (!exerciceSnap.exists) {
         return null;
     }
-    
     return { id: exerciceSnap.id, ...exerciceSnap.data() };
 } catch (error) {
     console.error('Error fetching prepareExercice:', error);

@@ -151,26 +151,56 @@ const getAllDurationsTypes = async (exerciceId) => {
 
 
 // optimisé done 🆗
+// const getAllVid = async () => {
+//   try {
+//     const videosSnapshot = await db.collectionGroup('videos').get();
+
+//     if (videosSnapshot.empty) {
+//       console.log('No videos found');
+//       return [];
+//     }
+
+//     return videosSnapshot.docs.map((doc) => ({
+//       id: doc.id,
+//       path: doc.ref.path, 
+//       ...doc.data(),
+//     }));
+//   } catch (error) {
+//     console.error('Error fetching all videos:', error);
+//     return [];
+//   }
+// };
+
 const getAllVid = async () => {
   try {
-    const videosSnapshot = await db.collectionGroup('videos').get();
+    const videosSnapshot = await db.collectionGroup("videos").get();
 
     if (videosSnapshot.empty) {
-      console.log('No videos found');
+      console.log("No videos found");
       return [];
     }
 
-    return videosSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      path: doc.ref.path, 
-      ...doc.data(),
-    }));
+    return videosSnapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      // Extract category ID from path
+      // path example: types/{typeId}/categories/{categoryId}/exercises/.../videos/{videoId}
+      const pathParts = doc.ref.path.split("/");
+      const categoryIndex = pathParts.indexOf("categories");
+      const category = categoryIndex !== -1 ? pathParts[categoryIndex + 1] : "uncategorized";
+
+      return {
+        id: doc.id,
+        path: doc.ref.path,
+        category, // <-- new
+        ...data,
+      };
+    });
   } catch (error) {
-    console.error('Error fetching all videos:', error);
+    console.error("Error fetching all videos:", error);
     return [];
   }
 };
-
 
 
 
