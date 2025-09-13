@@ -39,6 +39,24 @@ const getAllVideosByeq = async (equipment) => {
     return [];
   }
 };
+// is optimisé 🆗
+const getAllVideosBylevel= async (difficulty) => {
+  try {
+    const videosSnapshot = await db.collectionGroup("videos")
+      .where("difficulty", "==", difficulty)
+      .get();
+
+    const allVideos = videosSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return allVideos;
+  } catch (error) {
+    console.error("Error fetching videos by difficulty:", error);
+    return [];
+  }
+};
 //optimisé done 🆗
 const getAllEquipmentTypes = async (exerciceId) => {
   try {
@@ -159,7 +177,7 @@ const getAllVid = async () => {
 module.exports = {
   getAllEquipmentTypes,
   getAllDurationsTypes,
-  getAllVid,
+  getAllVid,getAllVideosBylevel,
   getAllDurationsTypes_2,
   getAllEquipmentTypes_2,getAllVideosByDuration,getAllVideosByeq
 };

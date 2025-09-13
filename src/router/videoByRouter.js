@@ -1,5 +1,5 @@
 const express = require('express');
-const {  getAllEquipment, getAllDuration, getAllVideosHandler, getAllDuration_2, getAllEquipment_2, getAllVideoBytime, getAllVideoByeq } =
+const {  getAllEquipment, getAllDuration, getAllVideosHandler, getAllDuration_2, getAllEquipment_2, getAllVideoBytime, getAllVideoByeq, getAllVideoBylevel } =
  require('../Controller/FilterVideoBy');
  
 const router = express.Router();
@@ -7,6 +7,8 @@ const router = express.Router();
 
 router.get('/time/:duration', getAllVideoBytime);
 router.get('/byequipment/:equipment',getAllVideoByeq);
+router.get('/byequipment/:level',getAllVideoBylevel);
+
 router.get('/equipment/:typeId/categories/:categoryId/exercises/:exerciceId', getAllEquipment);
 router.get('/duration/:typeId/categories/:categoryId/exercises/:exerciceId', getAllDuration);
 router.get('/videos/all',getAllVideosHandler);

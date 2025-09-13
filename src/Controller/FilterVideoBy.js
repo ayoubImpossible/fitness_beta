@@ -29,7 +29,18 @@ const getAllVideoBytime = async (req, res) => {
             res.status(500).json({ error: error.message });
           }
   };
+const getAllVideoBylevel = async (req, res) => {
+    const { level} = req.params;
 
+        try {
+            const collection = await getAllVideosBylevel(
+              level);
+            res.json(collection);
+
+          } catch (error) {
+            res.status(500).json({ error: error.message });
+          }
+  };
 //get all equipments
 const getAllEquipment=async(req,res)=>{
   const{exerciceId}=req.params;
@@ -92,5 +103,5 @@ const getAllVideosHandler = async (req, res) => {
     getAllDuration,
     getAllVideosHandler,
     getAllDuration_2,
-    getAllEquipment_2,getAllVideoByeq
+    getAllEquipment_2,getAllVideoByeq,getAllVideoBylevel
   };
