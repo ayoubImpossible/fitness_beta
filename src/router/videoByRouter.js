@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/time/:duration', getAllVideoBytime);
 router.get('/byequipment/:equipment',getAllVideoByeq);
-router.get('/byequipment/:level',getAllVideoBylevel);
+router.get('/bylevel/:level',getAllVideoBylevel);
 
 router.get('/equipment/:typeId/categories/:categoryId/exercises/:exerciceId', getAllEquipment);
 router.get('/duration/:typeId/categories/:categoryId/exercises/:exerciceId', getAllDuration);
