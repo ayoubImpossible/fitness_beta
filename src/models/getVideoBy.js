@@ -99,6 +99,7 @@ const getAllEquipmentTypes_2 = async () => {
     throw error;
   }
 };
+
 //optimisé done 🆗
 const getAllDurationsTypes_2 = async () => {
   try {
