@@ -113,9 +113,9 @@ const deleteWorkout = async (workoutId) => {
     throw error;
   }
 };
-  
+  // 🔹 Update workout inside a plan (plans/{planId})
 const updateWorkoutInPlan = async (planId, videoId, data) => {
-  if (!planId || !videoId || !data?.serieNumber || !data?.repetition) {
+  if (!planId || !videoId || data.serieNumber == null || data.repetition == null) {
     throw new Error("planId, videoId, serieNumber, and repetition are required");
   }
 
@@ -134,14 +134,21 @@ const updateWorkoutInPlan = async (planId, videoId, data) => {
     throw new Error(`Workout with ID ${videoId} not found in plan`);
   }
 
-  workouts[workoutIndex].serieNumber = data.serieNumber;
-  workouts[workoutIndex].repetition = data.repetition;
+  // 🔹 Add or update fields
+  workouts[workoutIndex] = {
+    ...workouts[workoutIndex],
+    serieNumber: data.serieNumber,
+    repetition: data.repetition,
+    updatedAt: new Date().toISOString(),
+  };
 
   await planDocRef.update({ workouts });
 
   return workouts[workoutIndex];
 };
 
+
+// 🔹 Update workout in workouts/{videoId}
 const UpdateSerieRepetition = async (videoId, data) => {
   if (!videoId || data.serieNumber == null || data.repetition == null) {
     throw new Error("videoId, serieNumber, and repetition are required");
@@ -154,6 +161,7 @@ const UpdateSerieRepetition = async (videoId, data) => {
     throw new Error(`Workout with ID ${videoId} not found`);
   }
 
+  // 🔹 Add or update fields in document
   await workoutDocRef.update({
     serieNumber: data.serieNumber,
     repetition: data.repetition,
@@ -163,6 +171,7 @@ const UpdateSerieRepetition = async (videoId, data) => {
   const updatedDoc = await workoutDocRef.get();
   return { id: updatedDoc.id, ...updatedDoc.data() };
 };
+
 
 
   
