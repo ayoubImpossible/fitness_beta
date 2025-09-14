@@ -12,7 +12,8 @@ const {
     addVideoToPrepareExerciceHandler,
     getVideosForPrepareExerciceHandler,getPrepareExerciceHandler,
     deleteWorkoutByIdHandler,
-    UpdateSerieRepetitionHandler
+    UpdateSerieRepetitionHandler,
+    UpdateSerieRepetitionPlanHandler
  
 } = require('../Controller/WorkoutController');
 const upload = require('../middlewares/multer');
