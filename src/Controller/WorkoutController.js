@@ -1,12 +1,14 @@
 const { getWorkoutsInPlan, addWorkoutToDB, getAllWorkouts,
         getWorkoutByIdAndUser, addPrepareWorkoutToDB, getPrepareWorkoutByTypeInDB,
-        deleteWorkout } =
+        deleteWorkout, 
+        updateWorkoutInPlan,
+        UpdateSerieRepetition} =
         require("../models/workout");
 
 const { db } = require("../Firebase/firebaseAdmin");
 const { uploadVideoToStorage, uploadImage } =
         require("../Utils/Helpers");
-        
+
 const { addPrepareExercice, getPrepareExercicesByPosition, 
         addVideoToPrepareExercice, getVideosForPrepareExercice, 
         getPrepareExerciceById } = 
@@ -251,6 +253,55 @@ const deleteWorkoutByIdHandler = async (req, res) => {
 
 
 
+
+
+
+
+const UpdateSerieRepetitionHandler = async (req, res) => {
+  const { videoId } = req.params;
+  const { serie, repetition } = req.body;
+
+  if (!videoId || serie == null || repetition == null) {
+    return res.status(400).json({ error: "videoId, serie and repetition are required" });
+  }
+
+  try {
+    const updatedWorkout = await UpdateSerieRepetition(videoId, { serieNumber: serie, repetition });
+    res.status(200).json(updatedWorkout);
+  } catch (error) {
+    console.error("Error updating workout:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+const UpdateSerieRepetitionPlanHandler = async (req, res) => {
+  const { planId, videoId } = req.params;
+  const { serie, repetition } = req.body;
+
+  if (serie == null || repetition == null) {
+    return res.status(400).json({ error: "serie and repetition are required" });
+  }
+
+  try {
+    const updatedWorkout = await updateWorkoutInPlan(planId, videoId, {
+      serieNumber: serie,
+      repetition,
+    });
+
+    res.status(200).json({ message: "Workout updated in plan", workout: updatedWorkout });
+  } catch (error) {
+    console.error("Error updating workout in plan:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+ 
+
+
 module.exports={getAllWorkoutInPlanHandler,
                 addWorkoutsToPlanHandler,
                 addWorkoutHandler,
@@ -263,5 +314,7 @@ module.exports={getAllWorkoutInPlanHandler,
                 getPrepareExercicesByPositionHandler,
                 getVideosForPrepareExerciceHandler,
                 getPrepareExerciceHandler,
-                deleteWorkoutByIdHandler
+                deleteWorkoutByIdHandler,
+                UpdateSerieRepetitionHandler,
+                UpdateSerieRepetitionPlanHandler
               }

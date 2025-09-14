@@ -114,6 +114,57 @@ const deleteWorkout = async (workoutId) => {
   }
 };
   
+const updateWorkoutInPlan = async (planId, videoId, data) => {
+  if (!planId || !videoId || !data?.serieNumber || !data?.repetition) {
+    throw new Error("planId, videoId, serieNumber, and repetition are required");
+  }
+
+  const planDocRef = PlansRef.doc(planId);
+  const planDoc = await planDocRef.get();
+
+  if (!planDoc.exists) {
+    throw new Error(`Plan with ID ${planId} not found`);
+  }
+
+  const planData = planDoc.data();
+  const workouts = planData.workouts || [];
+
+  const workoutIndex = workouts.findIndex(w => w.id === videoId);
+  if (workoutIndex === -1) {
+    throw new Error(`Workout with ID ${videoId} not found in plan`);
+  }
+
+  workouts[workoutIndex].serieNumber = data.serieNumber;
+  workouts[workoutIndex].repetition = data.repetition;
+
+  await planDocRef.update({ workouts });
+
+  return workouts[workoutIndex];
+};
+
+const UpdateSerieRepetition = async (videoId, data) => {
+  if (!videoId || data.serieNumber == null || data.repetition == null) {
+    throw new Error("videoId, serieNumber, and repetition are required");
+  }
+
+  const workoutDocRef = WorkoutRef.doc(videoId);
+  const workoutDoc = await workoutDocRef.get();
+
+  if (!workoutDoc.exists) {
+    throw new Error(`Workout with ID ${videoId} not found`);
+  }
+
+  await workoutDocRef.update({
+    serieNumber: data.serieNumber,
+    repetition: data.repetition,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const updatedDoc = await workoutDocRef.get();
+  return { id: updatedDoc.id, ...updatedDoc.data() };
+};
+
+
   
 module.exports = {
     getWorkoutsInPlan,
@@ -122,5 +173,7 @@ module.exports = {
     getWorkoutByIdAndUser,
     addPrepareWorkoutToDB,
     getPrepareWorkoutByTypeInDB,
-    deleteWorkout
+    deleteWorkout,
+    updateWorkoutInPlan,
+    UpdateSerieRepetition
 };

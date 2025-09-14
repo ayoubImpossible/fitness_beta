@@ -11,7 +11,8 @@ const {
     getPrepareExercicesByPositionHandler,
     addVideoToPrepareExerciceHandler,
     getVideosForPrepareExerciceHandler,getPrepareExerciceHandler,
-    deleteWorkoutByIdHandler
+    deleteWorkoutByIdHandler,
+    UpdateSerieRepetitionHandler
  
 } = require('../Controller/WorkoutController');
 const upload = require('../middlewares/multer');
@@ -33,6 +34,9 @@ router.get('/getPrepareExercice/:exerciceId',getPrepareExerciceHandler)
 router.post('/addPrepareExercice/addVideo/:exerciceId',uploade,addVideoToPrepareExerciceHandler)
 router.get("/getPrepareExerciceByPosition", getPrepareExercicesByPositionHandler);
 router.get('/getPrepareWorkouts/:type',getPrepareWorkoutsHandler)
-router.get('/getListeVideosInPrepareExercice/:exerciceId',getVideosForPrepareExerciceHandler)
+router.get('/getListeVideosInPrepareExercice/:exerciceId',getVideosForPrepareExerciceHandler);
+router.put('/updateSerieRepetition/:videoId',UpdateSerieRepetitionHandler);
+router.put('/updateSerieRepetitionPlan/:planId/:videoId/updateSerieReps',UpdateSerieRepetitionPlanHandler);
+
 
 module.exports = router;
