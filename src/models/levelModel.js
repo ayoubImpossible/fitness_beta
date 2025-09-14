@@ -1,4 +1,4 @@
-const { db,bucket, admin  } = require('../Firebase/firebaseAdmin');
+const { db, admin  } = require('../Firebase/firebaseAdmin');
 
 
 // Helper to get the videos collection
@@ -59,23 +59,30 @@ const getVideosCollection = (typeId,categoryId, exerciseId, levelId,atackId) =>
     };
     
 // Add a video to a level Valide
-const addVideoToLevel = async (typeId,categoryId, exerciseId, atackId,levelId ,videoData) => {
-  const videosCollection = getVideosCollection(typeId,categoryId, exerciseId, levelId,atackId);
+// Add a video to a level Valide
+const addVideoToLevel = async (typeId, categoryId, exerciseId, atackId, levelId, videoData) => {
+  const videosCollection = getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId);
   const videoDoc = await videosCollection.add(videoData);
 
-  // Create a notification
+  // Create a notification with full context
   const notificationRef = db.collection('notifications');
   await notificationRef.add({
     message: `A new video "${videoData.name}" has been added.`,
     videoId: videoDoc.id,
-    imageUrl:videoData.imageUrl,
+    typeId,
+    categoryId,
+    exerciseId,
+    levelId,
+    atackId,
+    imageUrl: videoData.imageUrl,
     type: 'video',
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    isRead: false, // Mark the notification as unread
+    isRead: false,
   });
 
   return { id: videoDoc.id, ...videoData };
 };
+
 
 
 // Update a video in a level Valide

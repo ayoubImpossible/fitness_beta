@@ -39,6 +39,7 @@ const getAllVideosByeq = async (equipment) => {
     return [];
   }
 };
+
 // is optimisé 🆗
 const getAllVideosBylevel= async (difficulty) => {
   try {
@@ -57,6 +58,7 @@ const getAllVideosBylevel= async (difficulty) => {
     return [];
   }
 };
+
 //optimisé done 🆗
 const getAllEquipmentTypes = async (exerciceId) => {
   try {
@@ -79,6 +81,7 @@ const getAllEquipmentTypes = async (exerciceId) => {
     throw error;
   }
 };
+
 //optimisé done 🆗
 const getAllEquipmentTypes_2 = async () => {
   try {
@@ -119,7 +122,6 @@ const getAllDurationsTypes_2 = async () => {
     throw error;
   }
 };
-
 
 // optimisé done 🆗
 const getAllDurationsTypes = async (exerciceId) => {
@@ -171,6 +173,7 @@ const getAllDurationsTypes = async (exerciceId) => {
 //   }
 // };
 
+// optimisé done 🆗
 const getAllVid = async () => {
   try {
     const videosSnapshot = await db.collectionGroup("videos").get();
@@ -179,12 +182,8 @@ const getAllVid = async () => {
       console.log("No videos found");
       return [];
     }
-
     return videosSnapshot.docs.map((doc) => {
       const data = doc.data();
-
-      // Extract category ID from path
-      // path example: types/{typeId}/categories/{categoryId}/exercises/.../videos/{videoId}
       const pathParts = doc.ref.path.split("/");
       const categoryIndex = pathParts.indexOf("categories");
       const category = categoryIndex !== -1 ? pathParts[categoryIndex + 1] : "uncategorized";
@@ -192,7 +191,7 @@ const getAllVid = async () => {
       return {
         id: doc.id,
         path: doc.ref.path,
-        category, // <-- new
+        category, 
         ...data,
       };
     });

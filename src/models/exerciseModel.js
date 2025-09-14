@@ -1,5 +1,4 @@
-const { db, admin } = require('../Firebase/firebaseAdmin');
-const exerciseRef = (categoryId) => db.collection('categories').doc(categoryId).collection('exercises');
+const { db } = require('../Firebase/firebaseAdmin');
 const categoriesRef = (typeId) => db.collection('types').doc(typeId).collection('categories');
 
 // Get all exercises for a category
