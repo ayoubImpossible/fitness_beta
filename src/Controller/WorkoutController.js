@@ -278,16 +278,16 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
 
 const UpdateSerieRepetitionPlanHandler = async (req, res) => {
   const { planId, videoUrl } = req.params;
-  const { serie, repetition } = req.body;
+  const { serieNumber, repetition } = req.body;
 
-  if (!planId || !videoUrl || serie == null || repetition == null) {
+  if (!planId || !videoUrl || serieNumber == null || repetition == null) {
     return res.status(400).json({ error: "planId, videoUrl, serie, and repetition are required" });
   }
 
   try {
     // Call the updated model function
     const updatedWorkout = await updateWorkoutInPlan(planId, videoUrl, {
-      serieNumber: serie,
+      serieNumber: serieNumber,
       repetition,
     });
 
