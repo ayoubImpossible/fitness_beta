@@ -113,51 +113,35 @@ const deleteWorkout = async (workoutId) => {
     throw error;
   }
 };
-  // 🔹 Update workout inside a plan (plans/{planId})
-const updateWorkoutInPlan = async (planId, videoUrl, data) => {
-  if (!planId || !videoUrl || data.serieNumber == null || data.repetition == null) {
-    throw new Error("planId, videoUrl, serieNumber, and repetition are required");
-  }
 
+
+
+const updateWorkoutInPlan = async (planId, workoutId, data) => {
   const planDocRef = PlansRef.doc(planId);
   const planDoc = await planDocRef.get();
 
-  if (!planDoc.exists) {
-    throw new Error(`Plan with ID ${planId} not found`);
-  }
+  if (!planDoc.exists) throw new Error(`Plan ${planId} not found`);
 
   const planData = planDoc.data();
   const workouts = planData.workouts || [];
+  let workoutFound = null;
 
-  let videoFound = null;
-
-  // Loop through workouts array
   for (let i = 0; i < workouts.length; i++) {
-    const workout = workouts[i];
-    if (!workout.videos || !Array.isArray(workout.videos)) continue;
-
-    const videoIndex = workout.videos.findIndex(v => v.videoUrl === videoUrl);
-    if (videoIndex !== -1) {
-      // Update the specific video
-      workout.videos[videoIndex] = {
-        ...workout.videos[videoIndex],
-        serieNumber: data.serieNumber,
-        repetition: data.repetition,
-        updatedAt: new Date().toISOString(),
-      };
-      videoFound = workout.videos[videoIndex];
+    if (workouts[i].id === workoutId) {
+      workouts[i].serieNumber = data.serieNumber;
+      workouts[i].repetition = data.repetition;
+      workouts[i].updatedAt = new Date().toISOString();
+      workoutFound = workouts[i];
       break;
     }
   }
 
-  if (!videoFound) {
-    throw new Error(`Video with URL ${videoUrl} not found in plan`);
-  }
+  if (!workoutFound) throw new Error(`Workout with ID ${workoutId} not found in plan`);
 
   await planDocRef.update({ workouts });
-
-  return videoFound;
+  return workoutFound;
 };
+
 
 
 

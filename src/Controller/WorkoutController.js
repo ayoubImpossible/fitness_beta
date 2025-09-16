@@ -256,52 +256,73 @@ const deleteWorkoutByIdHandler = async (req, res) => {
 
 
 
-
 const UpdateSerieRepetitionHandler = async (req, res) => {
   const { videoId } = req.params;
-  const { serie, repetition } = req.body;
+  const { serieNumber, repetition } = req.body; // Fixed: use serieNumber instead of serie
 
-  if (!videoId || serie == null || repetition == null) {
-    return res.status(400).json({ error: "videoId, serie and repetition are required" });
+  if (!videoId || serieNumber == null || repetition == null) {
+    return res.status(400).json({ 
+      error: "videoId, serieNumber and repetition are required" 
+    });
+  }
+
+  // Validate that values are positive numbers
+  if (parseInt(serieNumber) < 0 || parseInt(repetition) < 0) {
+    return res.status(400).json({ 
+      error: "serieNumber and repetition must be positive numbers" 
+    });
   }
 
   try {
-    const updatedWorkout = await UpdateSerieRepetition(videoId, { serieNumber: serie, repetition });
-    res.status(200).json(updatedWorkout);
+    const updatedWorkout = await UpdateSerieRepetition(videoId, { 
+      serieNumber: parseInt(serieNumber), 
+      repetition: parseInt(repetition) 
+    });
+    
+    res.status(200).json({
+      message: "Workout updated successfully",
+      workout: updatedWorkout
+    });
   } catch (error) {
     console.error("Error updating workout:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-
-
 const UpdateSerieRepetitionPlanHandler = async (req, res) => {
-  const { planId, videoUrl } = req.params;
-  const { serieNumber, repetition } = req.body;
+  const { planId } = req.params;
+  const { workoutId, serieNumber, repetition } = req.body;
 
-  if (!planId || !videoUrl || serieNumber == null || repetition == null) {
-    return res.status(400).json({ error: "planId, videoUrl, serie, and repetition are required" });
+  console.log("Received data:", { planId, workoutId, serieNumber, repetition });
+
+  if (!planId || !workoutId || serieNumber == null || repetition == null) {
+    return res.status(400).json({ 
+      error: "planId, workoutId, serieNumber, and repetition are required" 
+    });
+  }
+
+  // Validate that values are positive numbers
+  if (parseInt(serieNumber) < 0 || parseInt(repetition) < 0) {
+    return res.status(400).json({ 
+      error: "serieNumber and repetition must be positive numbers" 
+    });
   }
 
   try {
-    // Call the updated model function
-    const updatedWorkout = await updateWorkoutInPlan(planId, videoUrl, {
-      serieNumber: serieNumber,
-      repetition,
+    const updatedWorkout = await updateWorkoutInPlan(planId, workoutId, { 
+      serieNumber: parseInt(serieNumber), 
+      repetition: parseInt(repetition) 
     });
-
-    res.status(200).json({
-      message: "Workout updated in plan successfully",
-      workout: updatedWorkout
+    
+    res.status(200).json({ 
+      message: "Workout updated successfully", 
+      workout: updatedWorkout 
     });
   } catch (error) {
     console.error("Error updating workout in plan:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 
 module.exports={getAllWorkoutInPlanHandler,
