@@ -289,41 +289,55 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
   }
 };
 
+
+
+
+
 const UpdateSerieRepetitionPlanHandler = async (req, res) => {
   const { planId } = req.params;
-  const { workoutId, serieNumber, repetition } = req.body;
+  const { videoUrl, serieNumber, repetition } = req.body;
 
-  console.log("Received data:", { planId, workoutId, serieNumber, repetition });
-
-  if (!planId || !workoutId || serieNumber == null || repetition == null) {
-    return res.status(400).json({ 
-      error: "planId, workoutId, serieNumber, and repetition are required" 
-    });
-  }
-
-  // Validate that values are positive numbers
-  if (parseInt(serieNumber) < 0 || parseInt(repetition) < 0) {
-    return res.status(400).json({ 
-      error: "serieNumber and repetition must be positive numbers" 
-    });
+  if (!planId || !videoUrl || serieNumber == null || repetition == null) {
+    return res.status(400).json({ error: "planId, videoUrl, serieNumber, and repetition are required" });
   }
 
   try {
-    const updatedWorkout = await updateWorkoutInPlan(planId, workoutId, { 
-      serieNumber: parseInt(serieNumber), 
-      repetition: parseInt(repetition) 
-    });
+    const planDocRef = PlansRef.doc(planId);
+    const planDoc = await planDocRef.get();
     
-    res.status(200).json({ 
-      message: "Workout updated successfully", 
-      workout: updatedWorkout 
-    });
+    if (!planDoc.exists) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    const planData = planDoc.data();
+    const workouts = planData.workouts || [];
+    
+    // Find workout by videoUrl and update
+    let updated = false;
+    for (let i = 0; i < workouts.length; i++) {
+      if (workouts[i].videoUrl === videoUrl) {
+        workouts[i].serieNumber = parseInt(serieNumber);
+        workouts[i].repetition = parseInt(repetition);
+        workouts[i].updatedAt = new Date().toISOString();
+        updated = true;
+        break;
+      }
+    }
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Workout not found in plan" });
+    }
+    
+    // Save updated workouts back to plan
+    await planDocRef.update({ workouts });
+    
+    res.status(200).json({ message: "Updated successfully" });
+    
   } catch (error) {
-    console.error("Error updating workout in plan:", error);
+    console.error("Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
 
 module.exports={getAllWorkoutInPlanHandler,
                 addWorkoutsToPlanHandler,
