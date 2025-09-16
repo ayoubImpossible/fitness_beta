@@ -129,23 +129,34 @@ const updateWorkoutInPlan = async (planId, videoUrl, data) => {
   const planData = planDoc.data();
   const workouts = planData.workouts || [];
 
-  // Find workout by videoUrl instead of id
-  const workoutIndex = workouts.findIndex(w => w.videoUrl === videoUrl);
-  if (workoutIndex === -1) {
-    throw new Error(`Workout with videoUrl ${videoUrl} not found in plan`);
+  let videoFound = null;
+
+  // Loop through workouts array
+  for (let i = 0; i < workouts.length; i++) {
+    const workout = workouts[i];
+    if (!workout.videos || !Array.isArray(workout.videos)) continue;
+
+    const videoIndex = workout.videos.findIndex(v => v.videoUrl === videoUrl);
+    if (videoIndex !== -1) {
+      // Update the specific video
+      workout.videos[videoIndex] = {
+        ...workout.videos[videoIndex],
+        serieNumber: data.serieNumber,
+        repetition: data.repetition,
+        updatedAt: new Date().toISOString(),
+      };
+      videoFound = workout.videos[videoIndex];
+      break;
+    }
   }
 
-  // Update fields
-  workouts[workoutIndex] = {
-    ...workouts[workoutIndex],
-    serieNumber: data.serieNumber,
-    repetition: data.repetition,
-    updatedAt: new Date().toISOString(),
-  };
+  if (!videoFound) {
+    throw new Error(`Video with URL ${videoUrl} not found in plan`);
+  }
 
   await planDocRef.update({ workouts });
 
-  return workouts[workoutIndex];
+  return videoFound;
 };
 
 
