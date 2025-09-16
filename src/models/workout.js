@@ -114,9 +114,9 @@ const deleteWorkout = async (workoutId) => {
   }
 };
   // 🔹 Update workout inside a plan (plans/{planId})
-const updateWorkoutInPlan = async (planId, videoId, data) => {
-  if (!planId || !videoId || data.serieNumber == null || data.repetition == null) {
-    throw new Error("planId, videoId, serieNumber, and repetition are required");
+const updateWorkoutInPlan = async (planId, videoUrl, data) => {
+  if (!planId || !videoUrl || data.serieNumber == null || data.repetition == null) {
+    throw new Error("planId, videoUrl, serieNumber, and repetition are required");
   }
 
   const planDocRef = PlansRef.doc(planId);
@@ -129,12 +129,13 @@ const updateWorkoutInPlan = async (planId, videoId, data) => {
   const planData = planDoc.data();
   const workouts = planData.workouts || [];
 
-  const workoutIndex = workouts.findIndex(w => w.id === videoId);
+  // Find workout by videoUrl instead of id
+  const workoutIndex = workouts.findIndex(w => w.videoUrl === videoUrl);
   if (workoutIndex === -1) {
-    throw new Error(`Workout with ID ${videoId} not found in plan`);
+    throw new Error(`Workout with videoUrl ${videoUrl} not found in plan`);
   }
 
-  // 🔹 Add or update fields
+  // Update fields
   workouts[workoutIndex] = {
     ...workouts[workoutIndex],
     serieNumber: data.serieNumber,
@@ -146,6 +147,7 @@ const updateWorkoutInPlan = async (planId, videoId, data) => {
 
   return workouts[workoutIndex];
 };
+
 
 
 // 🔹 Update workout in workouts/{videoId}

@@ -37,7 +37,7 @@ router.get("/getPrepareExerciceByPosition", getPrepareExercicesByPositionHandler
 router.get('/getPrepareWorkouts/:type',getPrepareWorkoutsHandler)
 router.get('/getListeVideosInPrepareExercice/:exerciceId',getVideosForPrepareExerciceHandler);
 router.put('/updateSerieRepetition/:videoId',UpdateSerieRepetitionHandler);
-router.put('/updateSerieRepetitionPlan/:planId/:videoId/updateSerieReps',UpdateSerieRepetitionPlanHandler);
+router.put('/updateSerieRepetitionPlan/:planId/:videoUrl/updateSerieReps',UpdateSerieRepetitionPlanHandler);
 
 
 module.exports = router;

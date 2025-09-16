@@ -276,30 +276,32 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
 
 
 
-
-
 const UpdateSerieRepetitionPlanHandler = async (req, res) => {
-  const { planId, videoId } = req.params;
+  const { planId, videoUrl } = req.params;
   const { serie, repetition } = req.body;
 
-  if (serie == null || repetition == null) {
-    return res.status(400).json({ error: "serie and repetition are required" });
+  if (!planId || !videoUrl || serie == null || repetition == null) {
+    return res.status(400).json({ error: "planId, videoUrl, serie, and repetition are required" });
   }
 
   try {
-    const updatedWorkout = await updateWorkoutInPlan(planId, videoId, {
+    // Call the updated model function
+    const updatedWorkout = await updateWorkoutInPlan(planId, videoUrl, {
       serieNumber: serie,
       repetition,
     });
 
-    res.status(200).json({ message: "Workout updated in plan", workout: updatedWorkout });
+    res.status(200).json({
+      message: "Workout updated in plan successfully",
+      workout: updatedWorkout
+    });
   } catch (error) {
     console.error("Error updating workout in plan:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
- 
+
 
 
 module.exports={getAllWorkoutInPlanHandler,

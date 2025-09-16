@@ -19,7 +19,6 @@ const getVideosCollection = (typeId,categoryId, exerciseId, levelId,atackId) =>
     const getVideoCollectionInExercise = async (typeId, categoryId, exerciseId) => {
       const videos = [];
     
-      // Reference to attacks inside the exercise
       const attacksRef = db.collection('types')
         .doc(typeId)
         .collection('categories')
@@ -33,14 +32,12 @@ const getVideosCollection = (typeId,categoryId, exerciseId, levelId,atackId) =>
       for (const attackDoc of attacksSnapshot.docs) {
         const attackId = attackDoc.id;
     
-        // Reference to levels inside the attack
         const levelsRef = attacksRef.doc(attackId).collection('levels');
         const levelsSnapshot = await levelsRef.get();
     
         for (const levelDoc of levelsSnapshot.docs) {
           const levelId = levelDoc.id;
     
-          // Reference to videos inside the level
           const videosRef = levelsRef.doc(levelId).collection('videos');
           const videosSnapshot = await videosRef.get();
     

@@ -21,6 +21,8 @@ const getAllVideosByDuration = async (duration) => {
     return [];
   }
 };
+
+
 // is optimisé 🆗
 const getAllVideosByeq = async (equipment) => {
   try {
