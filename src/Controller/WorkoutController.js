@@ -273,34 +273,33 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
   }
 
   try {
-    const workoutDocRef = WorkoutRef.doc(workoutId);
-    const workoutDoc = await workoutDocRef.get();
-    
-    if (!workoutDoc.exists) {
-      return res.status(404).json({ error: "workout not found" });
-    }
+        const workoutDocRef = WorkoutRef.doc(workoutId);
+        const workoutDoc = await workoutDocRef.get();
+        
+        if (!workoutDoc.exists) {
+          return res.status(404).json({ error: "workout not found" });
+        }
 
-    const workoutData = workoutDoc.data();
-    const workouts = workoutData.workouts || [];
-    
-    // Find workout by videoUrl and update
+        const workoutData = workoutDoc.data();
+        const videos = workoutData.videos || [];
+
     let updated = false;
-    for (let i = 0; i < workouts.length; i++) {
-      if (workouts[i].videoUrl === videoUrl) {
-        workouts[i].serieNumber = parseInt(serieNumber);
-        workouts[i].repetition = parseInt(repetition);
-        workouts[i].updatedAt = new Date().toISOString();
+    for (let i = 0; i < videos.length; i++) {
+      if (videos[i].videoUrl === videoUrl) {
+        videos[i].serieNumber = parseInt(serieNumber);
+        videos[i].repetition = parseInt(repetition);
+        videos[i].updatedAt = new Date().toISOString();
         updated = true;
         break;
       }
     }
-    
+
     if (!updated) {
-      return res.status(404).json({ error: "Workout not found in plan" });
+      return res.status(404).json({ error: "Video not found in workout" });
     }
-    
-    // Save updated workouts back to plan
-    await workoutDocRef.update({ workouts });
+
+    await workoutDocRef.update({ videos }); // 👈 update the videos array
+
     
     res.status(200).json({ message: "Updated successfully" });
     
