@@ -116,60 +116,56 @@ const deleteWorkout = async (workoutId) => {
 
 
 
-const updateWorkoutInPlan = async (planId, workoutId, data) => {
-  const planDocRef = PlansRef.doc(planId);
-  const planDoc = await planDocRef.get();
 
-  if (!planDoc.exists) throw new Error(`Plan ${planId} not found`);
+const updateExerciseInWorkout = async (workoutId, videoUrl, serieNumber, repetition) => {
+  const workoutDocRef = WorkoutRef.doc(workoutId);
+  const workoutDoc = await workoutDocRef.get();
 
-  const planData = planDoc.data();
-  const workouts = planData.workouts || [];
-  let workoutFound = null;
+  if (!workoutDoc.exists) throw new Error("Workout not found");
 
-  for (let i = 0; i < workouts.length; i++) {
-    if (workouts[i].id === workoutId) {
-      workouts[i].serieNumber = data.serieNumber;
-      workouts[i].repetition = data.repetition;
-      workouts[i].updatedAt = new Date().toISOString();
-      workoutFound = workouts[i];
+  const exercises = workoutDoc.data().workouts || [];
+  let updated = false;
+
+  for (let ex of exercises) {
+    if (ex.videoUrl === videoUrl) {
+      ex.serieNumber = parseInt(serieNumber);
+      ex.repetition = parseInt(repetition);
+      ex.updatedAt = new Date().toISOString();
+      updated = true;
       break;
     }
   }
 
-  if (!workoutFound) throw new Error(`Workout with ID ${workoutId} not found in plan`);
+  if (!updated) throw new Error("Exercise with this videoUrl not found");
+
+  await workoutDocRef.update({ workouts: exercises });
+  return true;
+};
+
+const updateExerciseInPlan = async (planId, videoUrl, serieNumber, repetition) => {
+  const planDocRef = PlansRef.doc(planId);
+  const planDoc = await planDocRef.get();
+
+  if (!planDoc.exists) throw new Error("Plan not found");
+
+  const workouts = planDoc.data().workouts || [];
+  let updated = false;
+
+  for (let w of workouts) {
+    if (w.videoUrl === videoUrl) {
+      w.serieNumber = parseInt(serieNumber);
+      w.repetition = parseInt(repetition);
+      w.updatedAt = new Date().toISOString();
+      updated = true;
+      break;
+    }
+  }
+
+  if (!updated) throw new Error("Workout not found in plan");
 
   await planDocRef.update({ workouts });
-  return workoutFound;
+  return true;
 };
-
-
-
-
-// 🔹 Update workout in workouts/{videoId}
-const UpdateSerieRepetition = async (videoId, data) => {
-  if (!videoId || data.serieNumber == null || data.repetition == null) {
-    throw new Error("videoId, serieNumber, and repetition are required");
-  }
-
-  const workoutDocRef = WorkoutRef.doc(videoId);
-  const workoutDoc = await workoutDocRef.get();
-
-  if (!workoutDoc.exists) {
-    throw new Error(`Workout with ID ${videoId} not found`);
-  }
-
-  // 🔹 Add or update fields in document
-  await workoutDocRef.update({
-    serieNumber: data.serieNumber,
-    repetition: data.repetition,
-    updatedAt: new Date().toISOString(),
-  });
-
-  const updatedDoc = await workoutDocRef.get();
-  return { id: updatedDoc.id, ...updatedDoc.data() };
-};
-
-
 
   
 module.exports = {
@@ -180,6 +176,6 @@ module.exports = {
     addPrepareWorkoutToDB,
     getPrepareWorkoutByTypeInDB,
     deleteWorkout,
-    updateWorkoutInPlan,
-    UpdateSerieRepetition
+    updateExerciseInWorkout,
+    updateExerciseInPlan
 };

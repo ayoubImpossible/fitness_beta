@@ -2,7 +2,9 @@ const { getWorkoutsInPlan, addWorkoutToDB, getAllWorkouts,
         getWorkoutByIdAndUser, addPrepareWorkoutToDB, getPrepareWorkoutByTypeInDB,
         deleteWorkout, 
         updateWorkoutInPlan,
-        UpdateSerieRepetition} =
+        UpdateSerieRepetition,
+        updateExerciseInWorkout,
+        updateExerciseInPlan} =
         require("../models/workout");
 
 const { db } = require("../Firebase/firebaseAdmin");
@@ -255,96 +257,33 @@ const deleteWorkoutByIdHandler = async (req, res) => {
 
 
 
-
 const UpdateSerieRepetitionHandler = async (req, res) => {
-  const { workoutId } = req.params;   // Workout document ID
+  const { workoutId } = req.params;
   const { videoUrl, serieNumber, repetition } = req.body;
 
-  if (!workoutId || !videoUrl || serieNumber == null || repetition == null) {
+  if (!workoutId || !videoUrl || serieNumber == null || repetition == null)
     return res.status(400).json({ error: "workoutId, videoUrl, serieNumber, repetition are required" });
-  }
 
   try {
-    const workoutDocRef = WorkoutRef.doc(workoutId);
-    const workoutDoc = await workoutDocRef.get();
-
-    if (!workoutDoc.exists) {
-      return res.status(404).json({ error: "Workout not found" });
-    }
-
-    const workoutData = workoutDoc.data();
-    const exercises = workoutData.workouts || []; // 👈 correct array from DB
-
-    let updated = false;
-    for (let i = 0; i < exercises.length; i++) {
-      if (exercises[i].videoUrl === videoUrl) {  // 👈 match by videoUrl
-        exercises[i].serieNumber = parseInt(serieNumber);
-        exercises[i].repetition = parseInt(repetition);
-        exercises[i].updatedAt = new Date().toISOString();
-        updated = true;
-        break;
-      }
-    }
-
-    if (!updated) {
-      return res.status(404).json({ error: "Exercise with this videoUrl not found" });
-    }
-
-    await workoutDocRef.update({ workouts: exercises }); // 👈 save back workouts array
-
+    await updateExerciseInWorkout(workoutId, videoUrl, serieNumber, repetition);
     res.status(200).json({ message: "Exercise updated successfully" });
-  } catch (error) {
-    console.error("Error updating workout:", error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
   }
 };
-
-
-
 
 const UpdateSerieRepetitionPlanHandler = async (req, res) => {
   const { planId } = req.params;
   const { videoUrl, serieNumber, repetition } = req.body;
 
-  if (!planId || !videoUrl || serieNumber == null || repetition == null) {
+  if (!planId || !videoUrl || serieNumber == null || repetition == null)
     return res.status(400).json({ error: "planId, videoUrl, serieNumber, and repetition are required" });
-  }
 
   try {
-    const planDocRef = PlansRef.doc(planId);
-    const planDoc = await planDocRef.get();
-    
-    if (!planDoc.exists) {
-      return res.status(404).json({ error: "Plan not found" });
-    }
-
-    const planData = planDoc.data();
-    const workouts = planData.workouts || [];
-    
-    // Find workout by videoUrl and update
-    let updated = false;
-    for (let i = 0; i < workouts.length; i++) {
-      if (workouts[i].videoUrl === videoUrl) {
-        workouts[i].serieNumber = parseInt(serieNumber);
-        workouts[i].repetition = parseInt(repetition);
-        workouts[i].updatedAt = new Date().toISOString();
-        updated = true;
-        break;
-      }
-    }
-    
-    if (!updated) {
-      return res.status(404).json({ error: "Workout not found in plan" });
-    }
-    
-    // Save updated workouts back to plan
-    await planDocRef.update({ workouts });
-    
+    await updateExerciseInPlan(planId, videoUrl, serieNumber, repetition);
     res.status(200).json({ message: "Updated successfully" });
-    
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
   }
 };
 
