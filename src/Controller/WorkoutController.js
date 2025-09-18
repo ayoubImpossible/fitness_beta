@@ -300,7 +300,7 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
     }
     
     // Save updated workouts back to plan
-    await planDocRef.update({ workouts });
+    await workoutDocRef.update({ workouts });
     
     res.status(200).json({ message: "Updated successfully" });
     
