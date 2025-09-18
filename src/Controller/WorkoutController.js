@@ -15,7 +15,7 @@ const { addPrepareExercice, getPrepareExercicesByPosition,
         require("../models/prepareExercice");
 
 const PlansRef = db.collection("plans");
-
+const WorkoutRef = db.collection("workouts");
 
 
 const getAllWorkoutInPlanHandler=async(req,res)=>{
@@ -257,16 +257,15 @@ const deleteWorkoutByIdHandler = async (req, res) => {
 
 
 const UpdateSerieRepetitionHandler = async (req, res) => {
-  const { videoId } = req.params;
-  const { serieNumber, repetition } = req.body; // Fixed: use serieNumber instead of serie
+  const { workoutId } = req.params;
+  const { videoUrl, serieNumber, repetition } = req.body;
 
-  if (!videoId || serieNumber == null || repetition == null) {
+  if (!workoutId || serieNumber == null || repetition == null||videoUrlvideoUrl==null) {
     return res.status(400).json({ 
       error: "videoId, serieNumber and repetition are required" 
     });
   }
 
-  // Validate that values are positive numbers
   if (parseInt(serieNumber) < 0 || parseInt(repetition) < 0) {
     return res.status(400).json({ 
       error: "serieNumber and repetition must be positive numbers" 
@@ -274,17 +273,39 @@ const UpdateSerieRepetitionHandler = async (req, res) => {
   }
 
   try {
-    const updatedWorkout = await UpdateSerieRepetition(videoId, { 
-      serieNumber: parseInt(serieNumber), 
-      repetition: parseInt(repetition) 
-    });
+    const workoutDocRef = WorkoutRef.doc(workoutId);
+    const workoutDoc = await workoutDocRef.get();
     
-    res.status(200).json({
-      message: "Workout updated successfully",
-      workout: updatedWorkout
-    });
+    if (!workoutDoc.exists) {
+      return res.status(404).json({ error: "workout not found" });
+    }
+
+    const workoutData = workoutDoc.data();
+    const workouts = workoutData.workouts || [];
+    
+    // Find workout by videoUrl and update
+    let updated = false;
+    for (let i = 0; i < workouts.length; i++) {
+      if (workouts[i].videoUrl === videoUrl) {
+        workouts[i].serieNumber = parseInt(serieNumber);
+        workouts[i].repetition = parseInt(repetition);
+        workouts[i].updatedAt = new Date().toISOString();
+        updated = true;
+        break;
+      }
+    }
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Workout not found in plan" });
+    }
+    
+    // Save updated workouts back to plan
+    await planDocRef.update({ workouts });
+    
+    res.status(200).json({ message: "Updated successfully" });
+    
   } catch (error) {
-    console.error("Error updating workout:", error);
+    console.error("Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

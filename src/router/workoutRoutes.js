@@ -36,7 +36,8 @@ router.post('/addPrepareExercice/addVideo/:exerciceId',uploade,addVideoToPrepare
 router.get("/getPrepareExerciceByPosition", getPrepareExercicesByPositionHandler);
 router.get('/getPrepareWorkouts/:type',getPrepareWorkoutsHandler)
 router.get('/getListeVideosInPrepareExercice/:exerciceId',getVideosForPrepareExerciceHandler);
-router.post('/updateSerieRepetition/:videoId',UpdateSerieRepetitionHandler);
+
+router.post('/updateSerieRepetition/:workoutId',UpdateSerieRepetitionHandler);
 router.put('/updateSerieRepetitionPlan/:planId/updateSerieReps',UpdateSerieRepetitionPlanHandler);
 
 
