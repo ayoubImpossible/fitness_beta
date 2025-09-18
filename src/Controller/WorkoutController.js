@@ -257,58 +257,47 @@ const deleteWorkoutByIdHandler = async (req, res) => {
 
 
 const UpdateSerieRepetitionHandler = async (req, res) => {
-  const { workoutId } = req.params;
+  const { workoutId } = req.params;   // Workout document ID
   const { videoUrl, serieNumber, repetition } = req.body;
 
-  if (!workoutId || serieNumber == null || repetition == null||videoUrlvideoUrl==null) {
-    return res.status(400).json({ 
-      error: "videoId, serieNumber and repetition are required" 
-    });
-  }
-
-  if (parseInt(serieNumber) < 0 || parseInt(repetition) < 0) {
-    return res.status(400).json({ 
-      error: "serieNumber and repetition must be positive numbers" 
-    });
+  if (!workoutId || !videoUrl || serieNumber == null || repetition == null) {
+    return res.status(400).json({ error: "workoutId, videoUrl, serieNumber, repetition are required" });
   }
 
   try {
-        const workoutDocRef = WorkoutRef.doc(workoutId);
-        const workoutDoc = await workoutDocRef.get();
-        
-        if (!workoutDoc.exists) {
-          return res.status(404).json({ error: "workout not found" });
-        }
+    const workoutDocRef = WorkoutRef.doc(workoutId);
+    const workoutDoc = await workoutDocRef.get();
 
-        const workoutData = workoutDoc.data();
-        const videos = workoutData.videos || [];
+    if (!workoutDoc.exists) {
+      return res.status(404).json({ error: "Workout not found" });
+    }
+
+    const workoutData = workoutDoc.data();
+    const exercises = workoutData.workouts || []; // 👈 correct array from DB
 
     let updated = false;
-    for (let i = 0; i < videos.length; i++) {
-      if (videos[i].videoUrl === videoUrl) {
-        videos[i].serieNumber = parseInt(serieNumber);
-        videos[i].repetition = parseInt(repetition);
-        videos[i].updatedAt = new Date().toISOString();
+    for (let i = 0; i < exercises.length; i++) {
+      if (exercises[i].videoUrl === videoUrl) {  // 👈 match by videoUrl
+        exercises[i].serieNumber = parseInt(serieNumber);
+        exercises[i].repetition = parseInt(repetition);
+        exercises[i].updatedAt = new Date().toISOString();
         updated = true;
         break;
       }
     }
 
     if (!updated) {
-      return res.status(404).json({ error: "Video not found in workout" });
+      return res.status(404).json({ error: "Exercise with this videoUrl not found" });
     }
 
-    await workoutDocRef.update({ videos }); // 👈 update the videos array
+    await workoutDocRef.update({ workouts: exercises }); // 👈 save back workouts array
 
-    
-    res.status(200).json({ message: "Updated successfully" });
-    
+    res.status(200).json({ message: "Exercise updated successfully" });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error updating workout:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
 
 
 
