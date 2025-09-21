@@ -33,40 +33,30 @@ const mapUserLevelToDifficulty = (userLevel) => {
 };
 
 /**
- * Generate personalized plan (kept for 1 week)
+ * Generate personalized plan (unlimited, delete old >7 days)
  */
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Check if user already has an active plan within the last 7 days
+    // Check existing plans for this user
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
       .get();
 
+    // Remove plans older than 7 days
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    // Find recent active plan
-    const recentPlan = existingPlansSnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .find(plan => new Date(plan.createdAt) >= oneWeekAgo && plan.isActive);
-
-    if (recentPlan) {
-      // Return the existing plan if it is less than 1 week old
-      return recentPlan;
-    }
-
-    // Deactivate plans older than 7 days
-    const deactivatePromises = existingPlansSnapshot.docs.map(doc => {
+    const deletePromises = existingPlansSnapshot.docs.map(doc => {
       const plan = doc.data();
       if (new Date(plan.createdAt) < oneWeekAgo) {
-        return db.collection('ai_generated_plans').doc(doc.id).update({ isActive: false });
+        return db.collection('ai_generated_plans').doc(doc.id).delete();
       }
       return Promise.resolve();
     });
-    await Promise.all(deactivatePromises);
+    await Promise.all(deletePromises);
 
     // Fetch videos
     const videosSnapshot = await db.collectionGroup('videos').get();
@@ -305,12 +295,16 @@ const getUserGeneratedPlan = async (userId) => {
 
     if (planSnapshot.empty) return null;
 
+    // Return only plans within the last 7 days
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
     const activePlans = planSnapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(plan => plan.isActive === true)
+      .filter(plan => plan.isActive === true && new Date(plan.createdAt) >= oneWeekAgo)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return activePlans.length > 0 ? activePlans[0] : null;
+    return activePlans.length > 0 ? activePlans : [];
   } catch (error) {
     console.error('Error fetching user plan:', error);
     throw error;
