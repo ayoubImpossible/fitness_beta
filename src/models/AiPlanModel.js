@@ -33,26 +33,42 @@ const mapUserLevelToDifficulty = (userLevel) => {
 };
 
 /**
- * Generate personalized plan
+ * Generate personalized plan (kept for 1 week)
  */
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Vérifier si un plan AI existe déjà pour cet utilisateur
+    // Check if user already has an active plan within the last 7 days
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
       .get();
 
-    // Supprimer les anciens plans si existants
-    const deletePromises = [];
-    existingPlansSnapshot.forEach(doc => {
-      deletePromises.push(db.collection('ai_generated_plans').doc(doc.id).delete());
-    });
-    await Promise.all(deletePromises);
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    // Récupérer les vidéos
+    // Find recent active plan
+    const recentPlan = existingPlansSnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .find(plan => new Date(plan.createdAt) >= oneWeekAgo && plan.isActive);
+
+    if (recentPlan) {
+      // Return the existing plan if it is less than 1 week old
+      return recentPlan;
+    }
+
+    // Deactivate plans older than 7 days
+    const deactivatePromises = existingPlansSnapshot.docs.map(doc => {
+      const plan = doc.data();
+      if (new Date(plan.createdAt) < oneWeekAgo) {
+        return db.collection('ai_generated_plans').doc(doc.id).update({ isActive: false });
+      }
+      return Promise.resolve();
+    });
+    await Promise.all(deactivatePromises);
+
+    // Fetch videos
     const videosSnapshot = await db.collectionGroup('videos').get();
     if (videosSnapshot.empty) throw new Error('No videos available in database');
 
@@ -81,7 +97,7 @@ const generatePersonalizedPlan = async (userParams) => {
 
     if (filteredVideos.length === 0) throw new Error('No suitable videos found for user parameters');
 
-    // Générer le plan mensuel
+    // Generate the plan
     const monthlyPlan = generateMonthlyPlan(filteredVideos, userParams);
     const cleanedPlan = cleanObjectForFirestore(monthlyPlan);
 
@@ -99,6 +115,7 @@ const generatePersonalizedPlan = async (userParams) => {
     const planRef = await db.collection('ai_generated_plans').add(cleanedPlanData);
 
     return { id: planRef.id, ...cleanedPlanData };
+
   } catch (error) {
     console.error('Error generating personalized plan:', error);
     throw error;
