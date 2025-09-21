@@ -4,20 +4,14 @@ const { db } = require('../Firebase/firebaseAdmin');
  * Clean object to remove undefined values for Firestore
  */
 const cleanObjectForFirestore = (obj) => {
-  if (obj === null || obj === undefined) {
-    return null;
-  }
+  if (obj === null || obj === undefined) return null;
 
-  if (Array.isArray(obj)) {
-    return obj.map(item => cleanObjectForFirestore(item));
-  }
+  if (Array.isArray(obj)) return obj.map(item => cleanObjectForFirestore(item));
 
   if (typeof obj === 'object') {
     const cleaned = {};
     for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined) {
-        cleaned[key] = cleanObjectForFirestore(value);
-      }
+      if (value !== undefined) cleaned[key] = cleanObjectForFirestore(value);
     }
     return cleaned;
   }
@@ -30,7 +24,6 @@ const cleanObjectForFirestore = (obj) => {
  */
 const mapUserLevelToDifficulty = (userLevel) => {
   if (!userLevel) return 'beginner';
-
   switch (userLevel.toLowerCase()) {
     case 'beginner': return 'beginner';
     case 'intermediate': return 'Intermediate';
@@ -46,10 +39,22 @@ const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
+    // Vérifier si un plan AI existe déjà pour cet utilisateur
+    const existingPlansSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .get();
+
+    // Supprimer les anciens plans si existants
+    const deletePromises = [];
+    existingPlansSnapshot.forEach(doc => {
+      deletePromises.push(db.collection('ai_generated_plans').doc(doc.id).delete());
+    });
+    await Promise.all(deletePromises);
+
+    // Récupérer les vidéos
     const videosSnapshot = await db.collectionGroup('videos').get();
-    if (videosSnapshot.empty) {
-      throw new Error('No videos available in database');
-    }
+    if (videosSnapshot.empty) throw new Error('No videos available in database');
 
     const filteredVideos = [];
     videosSnapshot.forEach(doc => {
@@ -74,22 +79,15 @@ const generatePersonalizedPlan = async (userParams) => {
       }
     });
 
-    if (filteredVideos.length === 0) {
-      throw new Error('No suitable videos found for user parameters');
-    }
+    if (filteredVideos.length === 0) throw new Error('No suitable videos found for user parameters');
 
+    // Générer le plan mensuel
     const monthlyPlan = generateMonthlyPlan(filteredVideos, userParams);
-
     const cleanedPlan = cleanObjectForFirestore(monthlyPlan);
 
     const planData = {
       userId,
-      userParams: {
-        age,
-        weight,
-        level,
-        equippment
-      },
+      userParams: { age, weight, level, equippment },
       plan: cleanedPlan,
       createdAt: new Date().toISOString(),
       type: 'ai_generated',
@@ -98,14 +96,9 @@ const generatePersonalizedPlan = async (userParams) => {
     };
 
     const cleanedPlanData = cleanObjectForFirestore(planData);
-
     const planRef = await db.collection('ai_generated_plans').add(cleanedPlanData);
 
-    return {
-      id: planRef.id,
-      ...cleanedPlanData
-    };
-
+    return { id: planRef.id, ...cleanedPlanData };
   } catch (error) {
     console.error('Error generating personalized plan:', error);
     throw error;
@@ -117,7 +110,6 @@ const generatePersonalizedPlan = async (userParams) => {
  */
 const generateMonthlyPlan = (videos, userParams) => {
   const { age, weight, level, equipment } = userParams;
-
   const workoutIntensity = calculateWorkoutIntensity(age, weight, level, equipment);
   const videosByCategory = groupVideosByAttackMuscle(videos);
 
@@ -133,17 +125,9 @@ const generateMonthlyPlan = (videos, userParams) => {
           dayNum + (weekNum - 1) * 7,
           workoutIntensity
         );
-
-        if (workout.exercises.length > 0) {
-          week.workouts.push(workout);
-        }
+        if (workout.exercises.length > 0) week.workouts.push(workout);
       } else {
-        week.workouts.push({
-          day: dayNum,
-          type: 'rest',
-          name: 'Rest Day',
-          exercises: []
-        });
+        week.workouts.push({ day: dayNum, type: 'rest', name: 'Rest Day', exercises: [] });
       }
     }
     weeks.push(week);
@@ -166,7 +150,6 @@ const generateMonthlyPlan = (videos, userParams) => {
  */
 const calculateWorkoutIntensity = (age, weight, level) => {
   let baseIntensity = 1;
-
   if (age < 25) baseIntensity += 0.3;
   else if (age < 35) baseIntensity += 0.2;
   else if (age < 45) baseIntensity += 0.1;
@@ -182,7 +165,7 @@ const calculateWorkoutIntensity = (age, weight, level) => {
 };
 
 /**
- * Group videos
+ * Group videos by muscle attack
  */
 const groupVideosByAttackMuscle = (videos) => {
   const grouped = {};
@@ -213,18 +196,10 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   const categories = Object.keys(videosByCategory);
   const exercises = [];
 
-  if (categories.length === 0) {
-    return {
-      day: globalDayNum,
-      type: 'rest',
-      name: `Day ${globalDayNum} - Rest`,
-      exercises: []
-    };
-  }
+  if (categories.length === 0) return { day: globalDayNum, type: 'rest', name: `Day ${globalDayNum} - Rest`, exercises: [] };
 
   const focusCategory = categories[(globalDayNum - 1) % categories.length];
   const exerciseCount = Math.floor(4 + (intensity * 2));
-
   const categoryVideos = videosByCategory[focusCategory] || [];
   const primaryExercises = selectRandomVideos(categoryVideos, exerciseCount);
 

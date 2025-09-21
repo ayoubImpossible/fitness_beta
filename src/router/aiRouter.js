@@ -1,13 +1,13 @@
 // routes/aiRoutes.js
 const express = require("express");
 const router = express.Router();
-const {  createPlan } = require("../Controller/generateAi");
+const {  createPlan, getPlan } = require("../Controller/generateAi");
 
 router.post('/generate', createPlan);
+router.get('/user/:userId', getPlan);
 
 // Get user's current active AI plan
 // GET /api/ai-plans/user/:userId
-//router.get('/user/:userId', getUserAIPlanHandler);
 
 // Get specific week from user's plan
 // GET /api/ai-plans/user/:userId/week/:weekNumber
