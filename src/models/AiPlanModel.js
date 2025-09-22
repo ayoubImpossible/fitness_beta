@@ -1,4 +1,6 @@
 
+const { db } = require('../Firebase/firebaseAdmin');
+
 const cleanObjectForFirestore = (obj) => {
   if (obj === null || obj === undefined) return null;
 
