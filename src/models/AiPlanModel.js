@@ -269,17 +269,49 @@ const getUserGeneratedPlan = async (userId) => {
     throw error;
   }
 };
-
-const savePlan = async (planId) => {
+const savePlan = async (planId, userId, action = 'save') => {
   try {
-    await db.collection('ai_generated_plans').doc(planId).update({
-      isSaved: true,
-      savedAt: new Date().toISOString(),
+    console.log(`Attempting to ${action} plan ${planId} for user ${userId}`);
+    
+    // First, check if the plan exists and belongs to the user
+    const planRef = db.collection('ai_generated_plans').doc(planId);
+    const planDoc = await planRef.get();
+    
+    if (!planDoc.exists) {
+      throw new Error('Plan not found');
+    }
+    
+    const planData = planDoc.data();
+    if (planData.userId !== userId) {
+      throw new Error('Unauthorized: Plan does not belong to user');
+    }
+    
+    // Prepare updates
+    const updates = {
       updatedAt: new Date().toISOString()
-    });
-    return { success: true, message: 'Plan saved successfully' };
+    };
+
+    if (action === 'save') {
+      updates.isSaved = true;
+      updates.savedAt = new Date().toISOString();
+    } else if (action === 'unsave') {
+      updates.isSaved = false;
+      updates.savedAt = null;
+    }
+
+    // Update the document
+    await planRef.update(updates);
+    
+    console.log(`Successfully ${action}ed plan ${planId}`);
+    
+    return { 
+      success: true, 
+      message: action === 'save' ? 'Plan saved successfully' : 'Plan unsaved successfully',
+      action: action,
+      planId: planId
+    };
   } catch (error) {
-    console.error('Error saving plan:', error);
+    console.error(`Error ${action}ing plan ${planId}:`, error);
     throw error;
   }
 };

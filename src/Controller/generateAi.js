@@ -58,37 +58,70 @@ const updatePlan = async (req, res) => {
 
 
 
-
 const savePlanController = async (req, res) => {
   try {
+    console.log('Save plan request:', {
+      params: req.params,
+      body: req.body,
+      method: req.method,
+      url: req.url
+    });
+
     const { planId } = req.params;
+    const { userId, action = 'save' } = req.body;
     
-    // Validate planId
+    // Validate required fields
     if (!planId) {
+      console.log('Missing planId');
       return res.status(400).json({
         success: false,
-        error: 'Plan ID is required',
-        message: 'Please provide a valid plan ID'
+        error: 'Missing plan ID',
+        message: 'Plan ID is required in URL parameters'
       });
     }
 
+    if (!userId) {
+      console.log('Missing userId');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing user ID',
+        message: 'User ID is required in request body'
+      });
+    }
+
+    // Validate action
+    if (!['save', 'unsave'].includes(action)) {
+      console.log('Invalid action:', action);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid action',
+        message: 'Action must be either "save" or "unsave"'
+      });
+    }
+
+    console.log(`Processing ${action} request for plan ${planId} by user ${userId}`);
+
     // Call the savePlan service
-    const result = await savePlan(planId);
+    const result = await savePlan(planId, userId, action);
+
+    console.log('Save plan result:', result);
 
     return res.status(200).json({
       success: true,
       message: result.message,
       data: {
         planId: planId,
-        savedAt: new Date().toISOString()
+        userId: userId,
+        action: action,
+        timestamp: new Date().toISOString()
       }
     });
 
   } catch (error) {
     console.error('Error in savePlanController:', error);
     
-    // Handle specific Firestore errors
-    if (error.code === 'not-found') {
+    // Handle specific errors
+    if (error.message === 'Plan not found') {
       return res.status(404).json({
         success: false,
         error: 'Plan not found',
@@ -96,22 +129,22 @@ const savePlanController = async (req, res) => {
       });
     }
     
-    if (error.code === 'permission-denied') {
+    if (error.message.includes('Unauthorized')) {
       return res.status(403).json({
         success: false,
-        error: 'Permission denied',
-        message: 'You do not have permission to save this plan'
+        error: 'Access denied',
+        message: 'You can only modify your own plans'
       });
     }
 
     return res.status(500).json({
       success: false,
       error: 'Internal server error',
-      message: 'Failed to save plan. Please try again later.'
+      message: 'Failed to save plan. Please try again later.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
-
 
 
 module.exports = { createPlan, getPlan, updatePlan,savePlanController };
