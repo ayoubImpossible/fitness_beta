@@ -1,4 +1,4 @@
-const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus } = require('../models/AiPlanModel');
+const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan } = require('../models/AiPlanModel');
 /**
  * Create new AI-generated plan
  */
@@ -56,4 +56,62 @@ const updatePlan = async (req, res) => {
   }
 };
 
-module.exports = { createPlan, getPlan, updatePlan };
+
+
+
+const savePlanController = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    
+    // Validate planId
+    if (!planId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Plan ID is required',
+        message: 'Please provide a valid plan ID'
+      });
+    }
+
+    // Call the savePlan service
+    const result = await savePlan(planId);
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        planId: planId,
+        savedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in savePlanController:', error);
+    
+    // Handle specific Firestore errors
+    if (error.code === 'not-found') {
+      return res.status(404).json({
+        success: false,
+        error: 'Plan not found',
+        message: 'The specified plan does not exist'
+      });
+    }
+    
+    if (error.code === 'permission-denied') {
+      return res.status(403).json({
+        success: false,
+        error: 'Permission denied',
+        message: 'You do not have permission to save this plan'
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to save plan. Please try again later.'
+    });
+  }
+};
+
+
+
+module.exports = { createPlan, getPlan, updatePlan,savePlanController };

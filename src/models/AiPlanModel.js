@@ -1,8 +1,4 @@
-const { db } = require('../Firebase/firebaseAdmin');
 
-/**
- * Clean object to remove undefined values for Firestore
- */
 const cleanObjectForFirestore = (obj) => {
   if (obj === null || obj === undefined) return null;
 
@@ -19,9 +15,6 @@ const cleanObjectForFirestore = (obj) => {
   return obj;
 };
 
-/**
- * Map user level (input) to DB difficulty value
- */
 const mapUserLevelToDifficulty = (userLevel) => {
   if (!userLevel) return 'beginner';
   switch (userLevel.toLowerCase()) {
@@ -32,33 +25,23 @@ const mapUserLevelToDifficulty = (userLevel) => {
   }
 };
 
-/**
- * Generate personalized plan (unlimited, delete old >7 days)
- */
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Check existing plans for this user
+    // Find existing NON-SAVED plans for this user
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
+      .where('isSaved', '==', false)
       .get();
 
-    // Remove plans older than 7 days
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const deletePromises = existingPlansSnapshot.docs.map(doc => {
-      const plan = doc.data();
-      if (new Date(plan.createdAt) < oneWeekAgo) {
-        return db.collection('ai_generated_plans').doc(doc.id).delete();
-      }
-      return Promise.resolve();
-    });
+    // Delete only NON-SAVED existing plans for this user (keep saved ones)
+    const deletePromises = existingPlansSnapshot.docs.map(doc => 
+      db.collection('ai_generated_plans').doc(doc.id).delete()
+    );
     await Promise.all(deletePromises);
 
-    // Fetch videos
     const videosSnapshot = await db.collectionGroup('videos').get();
     if (videosSnapshot.empty) throw new Error('No videos available in database');
 
@@ -87,7 +70,6 @@ const generatePersonalizedPlan = async (userParams) => {
 
     if (filteredVideos.length === 0) throw new Error('No suitable videos found for user parameters');
 
-    // Generate the plan
     const monthlyPlan = generateMonthlyPlan(filteredVideos, userParams);
     const cleanedPlan = cleanObjectForFirestore(monthlyPlan);
 
@@ -98,7 +80,8 @@ const generatePersonalizedPlan = async (userParams) => {
       createdAt: new Date().toISOString(),
       type: 'ai_generated',
       totalWeeks: 4,
-      isActive: true
+      isActive: true,
+      isSaved: false // Default to not saved, user can save it later
     };
 
     const cleanedPlanData = cleanObjectForFirestore(planData);
@@ -112,9 +95,6 @@ const generatePersonalizedPlan = async (userParams) => {
   }
 };
 
-/**
- * Generate monthly plan (4 weeks)
- */
 const generateMonthlyPlan = (videos, userParams) => {
   const { age, weight, level, equipment } = userParams;
   const workoutIntensity = calculateWorkoutIntensity(age, weight, level, equipment);
@@ -152,9 +132,6 @@ const generateMonthlyPlan = (videos, userParams) => {
   };
 };
 
-/**
- * Workout Intensity
- */
 const calculateWorkoutIntensity = (age, weight, level) => {
   let baseIntensity = 1;
   if (age < 25) baseIntensity += 0.3;
@@ -171,9 +148,6 @@ const calculateWorkoutIntensity = (age, weight, level) => {
   return Math.max(0.5, Math.min(2.0, baseIntensity));
 };
 
-/**
- * Group videos by muscle attack
- */
 const groupVideosByAttackMuscle = (videos) => {
   const grouped = {};
   videos.forEach(video => {
@@ -184,9 +158,6 @@ const groupVideosByAttackMuscle = (videos) => {
   return grouped;
 };
 
-/**
- * Workout schedule
- */
 const shouldHaveWorkout = (dayNum, weekNum, level) => {
   const workoutDays = {
     beginner: [1, 3, 5],
@@ -196,9 +167,6 @@ const shouldHaveWorkout = (dayNum, weekNum, level) => {
   return workoutDays[level.toLowerCase()]?.includes(dayNum) || false;
 };
 
-/**
- * Daily workout generator
- */
 const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity) => {
   const categories = Object.keys(videosByCategory);
   const exercises = [];
@@ -252,9 +220,6 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   };
 };
 
-/**
- * Helpers
- */
 const selectRandomVideos = (videos, count) => {
   if (!videos || videos.length === 0) return [];
   const shuffled = [...videos].sort(() => 0.5 - Math.random());
@@ -284,36 +249,80 @@ const calculateTotalWorkoutTime = (exercises) => {
   return `${totalMinutes}-${totalMinutes + 10} minutes`;
 };
 
-/**
- * Get user's active plan
- */
 const getUserGeneratedPlan = async (userId) => {
   try {
     const planSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .where('isActive', '==', true)
+      .orderBy('createdAt', 'desc')
       .get();
 
-    if (planSnapshot.empty) return null;
+    if (planSnapshot.empty) return [];
 
-    // Return only plans within the last 7 days
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const activePlans = planSnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(plan => plan.isActive === true && new Date(plan.createdAt) >= oneWeekAgo)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    return activePlans.length > 0 ? activePlans : [];
+    const plans = planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return plans; // Return all active plans (both saved and unsaved)
   } catch (error) {
     console.error('Error fetching user plan:', error);
     throw error;
   }
 };
 
-/**
- * Update plan status
- */
+const savePlan = async (planId) => {
+  try {
+    await db.collection('ai_generated_plans').doc(planId).update({
+      isSaved: true,
+      savedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    return { success: true, message: 'Plan saved successfully' };
+  } catch (error) {
+    console.error('Error saving plan:', error);
+    throw error;
+  }
+};
+
+const getSavedPlans = async (userId) => {
+  try {
+    const planSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .where('isSaved', '==', true)
+      .where('isActive', '==', true)
+      .orderBy('savedAt', 'desc')
+      .get();
+
+    if (planSnapshot.empty) return [];
+
+    const savedPlans = planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return savedPlans;
+  } catch (error) {
+    console.error('Error fetching saved plans:', error);
+    throw error;
+  }
+};
+
+const getCurrentPlan = async (userId) => {
+  try {
+    const planSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .where('isSaved', '==', false)
+      .where('isActive', '==', true)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+
+    if (planSnapshot.empty) return null;
+
+    const plan = planSnapshot.docs[0];
+    return { id: plan.id, ...plan.data() };
+  } catch (error) {
+    console.error('Error fetching current plan:', error);
+    throw error;
+  }
+};
+
 const updatePlanStatus = async (planId, isActive) => {
   try {
     await db.collection('ai_generated_plans').doc(planId).update({
@@ -330,5 +339,8 @@ const updatePlanStatus = async (planId, isActive) => {
 module.exports = {
   generatePersonalizedPlan,
   getUserGeneratedPlan,
-  updatePlanStatus
+  updatePlanStatus,
+  savePlan,
+  getSavedPlans,
+  getCurrentPlan
 };
