@@ -370,11 +370,44 @@ const updatePlanStatus = async (planId, isActive) => {
   }
 };
 
+
+
+
+const cleanupUnsavedPlans = async (userId) => {
+  try {
+    console.log(`Cleaning up unsaved plans for user: ${userId}`);
+    
+    const unsavedPlansSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .where('isSaved', '==', false)
+      .get();
+
+    console.log(`Found ${unsavedPlansSnapshot.docs.length} unsaved plans to delete`);
+
+    const deletePromises = unsavedPlansSnapshot.docs.map(doc => 
+      db.collection('ai_generated_plans').doc(doc.id).delete()
+    );
+    
+    await Promise.all(deletePromises);
+    
+    return { 
+      success: true, 
+      deletedCount: unsavedPlansSnapshot.docs.length,
+      message: `Deleted ${unsavedPlansSnapshot.docs.length} unsaved plans`
+    };
+  } catch (error) {
+    console.error('Error cleaning up unsaved plans:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   generatePersonalizedPlan,
   getUserGeneratedPlan,
   updatePlanStatus,
   savePlan,
   getSavedPlans,
-  getCurrentPlan
+  getCurrentPlan,
+  cleanupUnsavedPlans
 };

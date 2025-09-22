@@ -1,4 +1,4 @@
-const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan } = require('../models/AiPlanModel');
+const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan, cleanupUnsavedPlans } = require('../models/AiPlanModel');
 /**
  * Create new AI-generated plan
  */
@@ -147,4 +147,40 @@ const savePlanController = async (req, res) => {
 };
 
 
-module.exports = { createPlan, getPlan, updatePlan,savePlanController };
+const cleanupUnsavedPlansController = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log('Cleanup request for user:', userId);
+    
+    // Validate userId
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing user ID',
+        message: 'User ID is required'
+      });
+    }
+
+    // Call the cleanup function
+    const result = await cleanupUnsavedPlans(userId);
+    
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Error in cleanupUnsavedPlansController:', error);
+    
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to cleanup unsaved plans'
+    });
+  }
+};
+
+
+module.exports = { createPlan, getPlan, updatePlan,savePlanController,cleanupUnsavedPlansController };
