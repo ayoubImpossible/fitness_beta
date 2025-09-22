@@ -292,8 +292,36 @@ const updatePlanStatus = async (planId, isActive) => {
   }
 };
 
+const savePlan = async (planId, userId, action = 'save') => {
+  try {
+    const updates = {
+      updatedAt: new Date().toISOString()
+    };
+
+    if (action === 'save') {
+      updates.isSaved = true;
+      updates.savedAt = new Date().toISOString();
+    } else if (action === 'unsave') {
+      updates.isSaved = false;
+      updates.savedAt = null;
+    }
+
+    await db.collection('ai_generated_plans').doc(planId).update(updates);
+    
+    return { 
+      success: true, 
+      message: action === 'save' ? 'Plan saved successfully' : 'Plan unsaved successfully',
+      action: action
+    };
+  } catch (error) {
+    console.error(`Error ${action}ing plan:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   generatePersonalizedPlan,
   getUserGeneratedPlan,
-  updatePlanStatus
+  updatePlanStatus,
+  savePlan
 };
