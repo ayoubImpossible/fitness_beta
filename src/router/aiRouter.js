@@ -5,8 +5,6 @@ const {  createPlan, getPlan, savePlanController, cleanupUnsavedPlansController 
 
 router.post('/generate', createPlan);
 router.get('/user/:userId', getPlan);
-router.put('/:planId/save', savePlanController);
-router.delete('/:uid/cleanup',cleanupUnsavedPlansController)
 
 // Get user's current active AI plan
 // GET /api/ai-plans/user/:userId

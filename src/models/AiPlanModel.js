@@ -1,5 +1,5 @@
-
 const { db } = require('../Firebase/firebaseAdmin');
+
 
 const cleanObjectForFirestore = (obj) => {
   if (obj === null || obj === undefined) return null;
@@ -17,6 +17,7 @@ const cleanObjectForFirestore = (obj) => {
   return obj;
 };
 
+
 const mapUserLevelToDifficulty = (userLevel) => {
   if (!userLevel) return 'beginner';
   switch (userLevel.toLowerCase()) {
@@ -27,21 +28,26 @@ const mapUserLevelToDifficulty = (userLevel) => {
   }
 };
 
+
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Find existing NON-SAVED plans for this user
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
-      .where('isSaved', '==', false)
       .get();
 
-    // Delete only NON-SAVED existing plans for this user (keep saved ones)
-    const deletePromises = existingPlansSnapshot.docs.map(doc => 
-      db.collection('ai_generated_plans').doc(doc.id).delete()
-    );
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const deletePromises = existingPlansSnapshot.docs.map(doc => {
+      const plan = doc.data();
+      if (new Date(plan.createdAt) < oneWeekAgo) {
+        return db.collection('ai_generated_plans').doc(doc.id).delete();
+      }
+      return Promise.resolve();
+    });
     await Promise.all(deletePromises);
 
     const videosSnapshot = await db.collectionGroup('videos').get();
@@ -82,8 +88,7 @@ const generatePersonalizedPlan = async (userParams) => {
       createdAt: new Date().toISOString(),
       type: 'ai_generated',
       totalWeeks: 4,
-      isActive: true,
-      isSaved: false // Default to not saved, user can save it later
+      isActive: true
     };
 
     const cleanedPlanData = cleanObjectForFirestore(planData);
@@ -96,6 +101,7 @@ const generatePersonalizedPlan = async (userParams) => {
     throw error;
   }
 };
+
 
 const generateMonthlyPlan = (videos, userParams) => {
   const { age, weight, level, equipment } = userParams;
@@ -134,6 +140,7 @@ const generateMonthlyPlan = (videos, userParams) => {
   };
 };
 
+
 const calculateWorkoutIntensity = (age, weight, level) => {
   let baseIntensity = 1;
   if (age < 25) baseIntensity += 0.3;
@@ -150,6 +157,7 @@ const calculateWorkoutIntensity = (age, weight, level) => {
   return Math.max(0.5, Math.min(2.0, baseIntensity));
 };
 
+
 const groupVideosByAttackMuscle = (videos) => {
   const grouped = {};
   videos.forEach(video => {
@@ -160,6 +168,7 @@ const groupVideosByAttackMuscle = (videos) => {
   return grouped;
 };
 
+
 const shouldHaveWorkout = (dayNum, weekNum, level) => {
   const workoutDays = {
     beginner: [1, 3, 5],
@@ -168,6 +177,7 @@ const shouldHaveWorkout = (dayNum, weekNum, level) => {
   };
   return workoutDays[level.toLowerCase()]?.includes(dayNum) || false;
 };
+
 
 const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity) => {
   const categories = Object.keys(videosByCategory);
@@ -222,6 +232,7 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   };
 };
 
+
 const selectRandomVideos = (videos, count) => {
   if (!videos || videos.length === 0) return [];
   const shuffled = [...videos].sort(() => 0.5 - Math.random());
@@ -251,108 +262,19 @@ const calculateTotalWorkoutTime = (exercises) => {
   return `${totalMinutes}-${totalMinutes + 10} minutes`;
 };
 
+
 const getUserGeneratedPlan = async (userId) => {
   try {
     const planSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
-      .where('type', '==', 'ai_generated')
-      .where('isActive', '==', true)
-      .orderBy('createdAt', 'desc')
-      .get();
-
-    if (planSnapshot.empty) return [];
-
-    const plans = planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return plans; // Return all active plans (both saved and unsaved)
-  } catch (error) {
-    console.error('Error fetching user plan:', error);
-    throw error;
-  }
-};
-const savePlan = async (planId, userId, action = 'save') => {
-  try {
-    console.log(`Attempting to ${action} plan ${planId} for user ${userId}`);
-    
-    // First, check if the plan exists and belongs to the user
-    const planRef = db.collection('ai_generated_plans').doc(planId);
-    const planDoc = await planRef.get();
-    
-    if (!planDoc.exists) {
-      throw new Error('Plan not found');
-    }
-    
-    const planData = planDoc.data();
-    if (planData.userId !== userId) {
-      throw new Error('Unauthorized: Plan does not belong to user');
-    }
-    
-    // Prepare updates
-    const updates = {
-      updatedAt: new Date().toISOString()
-    };
-
-    if (action === 'save') {
-      updates.isSaved = true;
-      updates.savedAt = new Date().toISOString();
-    } else if (action === 'unsave') {
-      updates.isSaved = false;
-      updates.savedAt = null;
-    }
-
-    // Update the document
-    await planRef.update(updates);
-    
-    console.log(`Successfully ${action}ed plan ${planId}`);
-    
-    return { 
-      success: true, 
-      message: action === 'save' ? 'Plan saved successfully' : 'Plan unsaved successfully',
-      action: action,
-      planId: planId
-    };
-  } catch (error) {
-    console.error(`Error ${action}ing plan ${planId}:`, error);
-    throw error;
-  }
-};
-
-const getSavedPlans = async (userId) => {
-  try {
-    const planSnapshot = await db.collection('ai_generated_plans')
-      .where('userId', '==', userId)
-      .where('type', '==', 'ai_generated')
-      .where('isSaved', '==', true)
-      .where('isActive', '==', true)
-      .orderBy('savedAt', 'desc')
-      .get();
-
-    if (planSnapshot.empty) return [];
-
-    const savedPlans = planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return savedPlans;
-  } catch (error) {
-    console.error('Error fetching saved plans:', error);
-    throw error;
-  }
-};
-
-const getCurrentPlan = async (userId) => {
-  try {
-    const planSnapshot = await db.collection('ai_generated_plans')
-      .where('userId', '==', userId)
-      .where('type', '==', 'ai_generated')
-      .where('isSaved', '==', false)
-      .where('isActive', '==', true)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
       .get();
 
     if (planSnapshot.empty) return null;
 
-    const plan = planSnapshot.docs[0];
-    return { id: plan.id, ...plan.data() };
+   
+    return planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error('Error fetching current plan:', error);
+    console.error('Error fetching user plan:', error);
     throw error;
   }
 };
@@ -370,44 +292,8 @@ const updatePlanStatus = async (planId, isActive) => {
   }
 };
 
-
-
-
-const cleanupUnsavedPlans = async (userId) => {
-  try {
-    console.log(`Cleaning up unsaved plans for user: ${userId}`);
-    
-    const unsavedPlansSnapshot = await db.collection('ai_generated_plans')
-      .where('userId', '==', userId)
-      .where('type', '==', 'ai_generated')
-      .where('isSaved', '==', false)
-      .get();
-
-    console.log(`Found ${unsavedPlansSnapshot.docs.length} unsaved plans to delete`);
-
-    const deletePromises = unsavedPlansSnapshot.docs.map(doc => 
-      db.collection('ai_generated_plans').doc(doc.id).delete()
-    );
-    
-    await Promise.all(deletePromises);
-    
-    return { 
-      success: true, 
-      deletedCount: unsavedPlansSnapshot.docs.length,
-      message: `Deleted ${unsavedPlansSnapshot.docs.length} unsaved plans`
-    };
-  } catch (error) {
-    console.error('Error cleaning up unsaved plans:', error);
-    throw error;
-  }
-};
-
 module.exports = {
   generatePersonalizedPlan,
   getUserGeneratedPlan,
-  updatePlanStatus,
-  savePlan,
-  getSavedPlans,
-  getCurrentPlan,
-  cleanupUnsavedPlans
+  updatePlanStatus
 };
