@@ -124,4 +124,22 @@ const updatePlan = async (req, res) => {
   }
 };
 
-module.exports = { createPlan, getPlan, updatePlan ,savePlanController};
+ const deletePlanByIdHandler = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    if (!planId) {
+      return res.status(400).json({ error: 'planId is required' });
+    }
+    const planRef = db.collection('ai_generated_plans').doc(planId);
+    const planDoc = await planRef.get();
+    if (!planDoc.exists) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    await planRef.delete();
+    res.json({ message: 'Plan deleted successfully' });
+  } catch (error) {
+    console.error('Error in deletePlanByIdHandler:', error);
+    res.status(500).json({ error: 'Failed to delete plan' });
+  }}
+
+module.exports = { createPlan, getPlan, updatePlan ,savePlanController,deletePlanByIdHandler};

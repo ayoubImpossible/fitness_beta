@@ -1,11 +1,12 @@
 // routes/aiRoutes.js
 const express = require("express");
 const router = express.Router();
-const {  createPlan, getPlan, savePlanController, cleanupUnsavedPlansController } = require("../Controller/generateAi");
+const {  createPlan, getPlan, savePlanController, deletePlanByIdHandler } = require("../Controller/generateAi");
 
 router.post('/generate', createPlan);
 router.get('/user/:userId', getPlan);
 router.put('/savePlan/:planId',savePlanController)
+router.delete('deletePlan/:planId',deletePlanByIdHandler)
 // Get user's current active AI plan
 // GET /api/ai-plans/user/:userId
 
