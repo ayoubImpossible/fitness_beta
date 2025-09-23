@@ -6,7 +6,7 @@ const {  createPlan, getPlan, savePlanController, deletePlanByIdHandler } = requ
 router.post('/generate', createPlan);
 router.get('/user/:userId', getPlan);
 router.put('/savePlan/:planId',savePlanController)
-router.delete('deletePlan/:planId',deletePlanByIdHandler)
+router.delete('/deletePlan/:planId',deletePlanByIdHandler)
 // Get user's current active AI plan
 // GET /api/ai-plans/user/:userId
 
