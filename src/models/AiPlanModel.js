@@ -29,25 +29,22 @@ const mapUserLevelToDifficulty = (userLevel) => {
 };
 
 
+
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
+    // Find existing NON-SAVED plans for this user
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
+      .where('isSaved', '==', false)
       .get();
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const deletePromises = existingPlansSnapshot.docs.map(doc => {
-      const plan = doc.data();
-      if (new Date(plan.createdAt) < oneWeekAgo) {
-        return db.collection('ai_generated_plans').doc(doc.id).delete();
-      }
-      return Promise.resolve();
-    });
+    // Delete only NON-SAVED existing plans for this user (keep saved ones)
+    const deletePromises = existingPlansSnapshot.docs.map(doc => 
+      db.collection('ai_generated_plans').doc(doc.id).delete()
+    );
     await Promise.all(deletePromises);
 
     const videosSnapshot = await db.collectionGroup('videos').get();
@@ -88,7 +85,8 @@ const generatePersonalizedPlan = async (userParams) => {
       createdAt: new Date().toISOString(),
       type: 'ai_generated',
       totalWeeks: 4,
-      isActive: true
+      isActive: true,
+      isSaved: false // Default to not saved, user can save it later
     };
 
     const cleanedPlanData = cleanObjectForFirestore(planData);
@@ -101,6 +99,7 @@ const generatePersonalizedPlan = async (userParams) => {
     throw error;
   }
 };
+
 
 
 const generateMonthlyPlan = (videos, userParams) => {

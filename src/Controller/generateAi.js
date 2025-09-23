@@ -1,3 +1,4 @@
+const { db } = require('../Firebase/firebaseAdmin');
 const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan } = require('../models/AiPlanModel');
 /**
  * Create new AI-generated plan
