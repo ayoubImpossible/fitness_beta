@@ -317,10 +317,25 @@ const savePlan = async (planId, userId, action = 'save') => {
     throw error;
   }
 };
+const deletePlanById = async (planId) => {
+  try {
+    const planRef = db.collection('ai_generated_plans').doc(planId);
+    const planDoc = await planRef.get();
 
+    if (!planDoc.exists) {
+      return { success: false, message: 'Plan not found' };
+    }
+
+    await planRef.delete();
+    return { success: true, message: 'Plan deleted successfully' };
+  } catch (error) {
+    console.error('Error deleting plan:', error);
+    throw new Error('Failed to delete plan');
+  }
+};
 module.exports = {
   generatePersonalizedPlan,
   getUserGeneratedPlan,
   updatePlanStatus,
-  savePlan
+  savePlan,deletePlanById
 };

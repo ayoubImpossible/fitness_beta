@@ -1,5 +1,5 @@
 const { db } = require('../Firebase/firebaseAdmin');
-const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan } = require('../models/AiPlanModel');
+const { generatePersonalizedPlan, getUserGeneratedPlan, updatePlanStatus, savePlan, deletePlanById } = require('../models/AiPlanModel');
 /**
  * Create new AI-generated plan
  */
@@ -124,22 +124,22 @@ const updatePlan = async (req, res) => {
   }
 };
 
- const deletePlanByIdHandler = async (req, res) => {
+const deletePlanByIdHandler = async (req, res) => {
   try {
     const { planId } = req.params;
-    if (!planId) {
-      return res.status(400).json({ error: 'planId is required' });
+    if (!planId) return res.status(400).json({ error: 'planId is required' });
+
+    const result = await deletePlanById(planId);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.message });
     }
-    const planRef = db.collection('ai_generated_plans').doc(planId);
-    const planDoc = await planRef.get();
-    if (!planDoc.exists) {
-      return res.status(404).json({ error: 'Plan not found' });
-    }
-    await planRef.delete();
-    res.json({ message: 'Plan deleted successfully' });
+
+    return res.json({ message: result.message });
   } catch (error) {
     console.error('Error in deletePlanByIdHandler:', error);
-    res.status(500).json({ error: 'Failed to delete plan' });
-  }}
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = { createPlan, getPlan, updatePlan ,savePlanController,deletePlanByIdHandler};
