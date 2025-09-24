@@ -344,8 +344,6 @@
 
 
 
-
-
 const { db } = require('../Firebase/firebaseAdmin');
 
 
@@ -377,25 +375,23 @@ const mapUserLevelToDifficulty = (userLevel) => {
 };
 
 
+
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Check if user already has ANY plan (saved or not saved)
+    // Check if user already has ANY plan (saved or unsaved)
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
       .get();
 
-    // If user has any existing plans, delete them all (this replaces the old plan)
-    if (!existingPlansSnapshot.empty) {
-      console.log(`User ${userId} already has a plan. Replacing with new plan.`);
-      
-      const deletePromises = existingPlansSnapshot.docs.map(doc => 
-        db.collection('ai_generated_plans').doc(doc.id).delete()
-      );
-      await Promise.all(deletePromises);
-    }
+    // Delete ALL existing plans for this user (this will replace the current plan)
+    // This maintains the "one plan per user" rule regardless of save status
+    const deletePromises = existingPlansSnapshot.docs.map(doc => 
+      db.collection('ai_generated_plans').doc(doc.id).delete()
+    );
+    await Promise.all(deletePromises);
 
     const videosSnapshot = await db.collectionGroup('videos').get();
     if (videosSnapshot.empty) throw new Error('No videos available in database');
@@ -442,7 +438,6 @@ const generatePersonalizedPlan = async (userParams) => {
     const cleanedPlanData = cleanObjectForFirestore(planData);
     const planRef = await db.collection('ai_generated_plans').add(cleanedPlanData);
 
-    console.log(`New plan created for user ${userId} with ID: ${planRef.id}`);
     return { id: planRef.id, ...cleanedPlanData };
 
   } catch (error) {
@@ -451,27 +446,68 @@ const generatePersonalizedPlan = async (userParams) => {
   }
 };
 
-
-// Function to clean up unsaved plans when user logs out
-const deleteUnsavedPlansOnLogout = async (userId) => {
+// New function to clean up unsaved plans on logout
+const cleanupUnsavedPlansOnLogout = async (userId) => {
   try {
+    // Find and delete only NON-SAVED plans for this user when they log out
     const unsavedPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
       .where('isSaved', '==', false)
       .get();
 
-    if (!unsavedPlansSnapshot.empty) {
-      const deletePromises = unsavedPlansSnapshot.docs.map(doc => 
-        db.collection('ai_generated_plans').doc(doc.id).delete()
-      );
-      await Promise.all(deletePromises);
-      console.log(`Deleted ${unsavedPlansSnapshot.docs.length} unsaved plans for user ${userId} on logout`);
-    }
-
-    return { success: true, deletedCount: unsavedPlansSnapshot.docs.length };
+    const deletePromises = unsavedPlansSnapshot.docs.map(doc => 
+      db.collection('ai_generated_plans').doc(doc.id).delete()
+    );
+    
+    await Promise.all(deletePromises);
+    
+    return { 
+      success: true, 
+      deletedPlans: unsavedPlansSnapshot.size,
+      message: `Cleaned up ${unsavedPlansSnapshot.size} unsaved plans for user ${userId}` 
+    };
   } catch (error) {
-    console.error('Error deleting unsaved plans on logout:', error);
+    console.error('Error cleaning up unsaved plans:', error);
+    throw error;
+  }
+};
+
+// Updated function to get user's single plan
+const getUserGeneratedPlan = async (userId) => {
+  try {
+    const planSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .get();
+
+    if (planSnapshot.empty) return null;
+
+   
+    return planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching user plan:', error);
+    throw error;
+  }
+};
+
+// New function to check if user can generate a new plan
+const canUserGenerateNewPlan = async (userId) => {
+  try {
+    const existingPlansSnapshot = await db.collection('ai_generated_plans')
+      .where('userId', '==', userId)
+      .where('type', '==', 'ai_generated')
+      .get();
+
+    return {
+      canGenerate: true, // Always true since we replace existing plans
+      hasExistingPlan: !existingPlansSnapshot.empty,
+      existingPlanCount: existingPlansSnapshot.size,
+      message: existingPlansSnapshot.empty 
+        ? 'No existing plan found. New plan will be created.' 
+        : 'Existing plan will be replaced with new plan.'
+    };
+  } catch (error) {
+    console.error('Error checking user plan status:', error);
     throw error;
   }
 };
@@ -637,21 +673,6 @@ const calculateTotalWorkoutTime = (exercises) => {
 };
 
 
-const getUserGeneratedPlan = async (userId) => {
-  try {
-    const planSnapshot = await db.collection('ai_generated_plans')
-      .where('userId', '==', userId)
-      .get();
-
-    if (planSnapshot.empty) return null;
-
-    return planSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('Error fetching user plan:', error);
-    throw error;
-  }
-};
-
 const updatePlanStatus = async (planId, isActive) => {
   try {
     await db.collection('ai_generated_plans').doc(planId).update({
@@ -714,6 +735,5 @@ module.exports = {
   getUserGeneratedPlan,
   updatePlanStatus,
   savePlan,
-  deletePlanById,
-  deleteUnsavedPlansOnLogout // Export the logout cleanup function
+  deletePlanById
 };
