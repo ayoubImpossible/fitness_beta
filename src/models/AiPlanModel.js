@@ -393,8 +393,6 @@
 //   deletePlanById
 // };
 
-
-
 const { db } = require('../Firebase/firebaseAdmin');
 
 const cleanObjectForFirestore = (obj) => {
@@ -420,64 +418,6 @@ const mapUserLevelToDifficulty = (userLevel) => {
   }
 };
 
-// Debug function to find actual collection structure
-const debugCollectionStructure = async () => {
-  try {
-    console.log('=== DEBUGGING COLLECTION STRUCTURE ===');
-    
-    // Try different possible collection names for attacks
-    const possibleAttackNames = ['atacks', 'attacks', 'attack', 'muscleAttacks', 'muscle_attacks'];
-    for (const name of possibleAttackNames) {
-      try {
-        const snapshot = await db.collectionGroup(name).limit(3).get();
-        if (!snapshot.empty) {
-          console.log(`✅ Found collection group: ${name} (${snapshot.size} docs)`);
-          snapshot.forEach(doc => {
-            console.log(`  Document ID: ${doc.id}`);
-            console.log(`  Document data:`, doc.data());
-            console.log(`  Document path: ${doc.ref.path}`);
-          });
-        } else {
-          console.log(`❌ Collection group '${name}' is empty`);
-        }
-      } catch (error) {
-        console.log(`❌ Error with collection group '${name}':`, error.message);
-      }
-    }
-    
-    // Try different possible collection names for weeks
-    const possibleWeekNames = ['weeks', 'week', 'weekPlans', 'week_plans'];
-    for (const name of possibleWeekNames) {
-      try {
-        const snapshot = await db.collectionGroup(name).limit(3).get();
-        if (!snapshot.empty) {
-          console.log(`✅ Found collection group: ${name} (${snapshot.size} docs)`);
-          snapshot.forEach(doc => {
-            console.log(`  Document ID: ${doc.id}`);
-            console.log(`  Document data:`, doc.data());
-            console.log(`  Document path: ${doc.ref.path}`);
-          });
-        } else {
-          console.log(`❌ Collection group '${name}' is empty`);
-        }
-      } catch (error) {
-        console.log(`❌ Error with collection group '${name}':`, error.message);
-      }
-    }
-    
-    // Also check what collections exist at root level
-    console.log('=== CHECKING ROOT COLLECTIONS ===');
-    const collections = await db.listCollections();
-    collections.forEach(collection => {
-      console.log(`Root collection: ${collection.id}`);
-    });
-    
-    console.log('=== DEBUG COMPLETE ===');
-  } catch (error) {
-    console.error('Debug error:', error);
-  }
-};
-
 // Add function to get muscle attack mapping from group collection
 const getMuscleAttackMapping = async () => {
   try {
@@ -485,16 +425,10 @@ const getMuscleAttackMapping = async () => {
     const muscleAttackSnapshot = await db.collectionGroup('atack').get();
     const mapping = {};
     
-    console.log(`Muscle attack snapshot size: ${muscleAttackSnapshot.size}`);
-    
     muscleAttackSnapshot.forEach(doc => {
       const data = doc.data();
-      console.log(`Attack doc ${doc.id}:`, data);
-      // Use the muscleAttack field as the workout name
       mapping[doc.id] = data.muscleAttack || data.name || `Workout ${doc.id}`;
     });
-    
-    console.log('Muscle attack mapping:', mapping);
     return mapping;
   } catch (error) {
     console.error('Error fetching muscle attack mapping from group collection:', error);
@@ -524,19 +458,15 @@ const getWeekMapping = async () => {
       weekSnapshot.forEach(doc => {
         const data = doc.data();
         console.log(`Week doc ${doc.id}:`, data);
-        // Use name, weekName, or muscleAttack field for week names
         mapping[doc.id] = data.name || data.weekName || data.muscleAttack || `Week ${doc.id}`;
       });
     } else {
-      // Fallback: create default week names
       console.log('No week collections found, using default names');
       mapping['week1'] = 'Foundation Week';
       mapping['week2'] = 'Building Week';
       mapping['week3'] = 'Strength Week';
       mapping['week4'] = 'Peak Performance Week';
     }
-    
-    console.log('Week mapping:', mapping);
     return mapping;
   } catch (error) {
     console.error('Error fetching week mapping from group collection:', error);
@@ -550,25 +480,20 @@ const getWeekMapping = async () => {
   }
 };
 
-// Remove the hardcoded getWeekName function since we're now fetching from DB
-
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
 
   try {
-    // Check if user already has ANY plan (saved or unsaved)
     const existingPlansSnapshot = await db.collection('ai_generated_plans')
       .where('userId', '==', userId)
       .where('type', '==', 'ai_generated')
       .get();
 
-    // Delete ALL existing plans for this user
     const deletePromises = existingPlansSnapshot.docs.map(doc => 
       db.collection('ai_generated_plans').doc(doc.id).delete()
     );
     await Promise.all(deletePromises);
 
-    // Fetch both muscle attack and week names mapping
     const [muscleAttackMap, weekMap] = await Promise.all([
       getMuscleAttackMapping(),
       getWeekMapping()
@@ -592,7 +517,6 @@ const generatePersonalizedPlan = async (userParams) => {
         (Array.isArray(videoData.equipment) && videoData.equipment.includes(equippment));
 
       if (matchesDifficulty && matchesEquipment) {
-        // Add muscle attack name to video data
         const muscleAttackName = muscleAttackMap[videoData.atackId] || videoData.muscleAttack || 'General Fitness';
         
         filteredVideos.push({
@@ -636,19 +560,17 @@ const generateMonthlyPlan = async (videos, userParams, muscleAttackMap, weekMap)
   const workoutIntensity = calculateWorkoutIntensity(age, weight, level, equipment);
   const videosByCategory = groupVideosByAttackMuscle(videos);
 
-  // Get available week IDs to cycle through
   const weekIds = Object.keys(weekMap);
   
   const weeks = [];
   for (let weekNum = 1; weekNum <= 4; weekNum++) {
-    // Get week ID by cycling through available weeks or generate default
     const weekId = weekIds[(weekNum - 1) % weekIds.length] || `week_${weekNum}`;
     const weekName = weekMap[weekId] || `Week ${weekNum}`;
     
     const week = { 
       weekNumber: weekNum,
-      weekId: weekId, // Include week ID for reference
-      weekName: weekName, // Get actual week name from DB
+      weekId: weekId, 
+      weekName: weekName, 
       workouts: [] 
     };
 
@@ -659,7 +581,7 @@ const generateMonthlyPlan = async (videos, userParams, muscleAttackMap, weekMap)
           weekNum,
           dayNum + (weekNum - 1) * 7,
           workoutIntensity,
-          muscleAttackMap // Pass the mapping
+          muscleAttackMap 
         );
         if (workout.exercises.length > 0) week.workouts.push(workout);
       } else {
@@ -687,6 +609,42 @@ const generateMonthlyPlan = async (videos, userParams, muscleAttackMap, weekMap)
   };
 };
 
+// Function to use database sets and reps with progressive overload
+const getExerciseSpecificProgramming = (video, intensity, weekNum) => {
+  // Use database values as base
+  const baseSets = parseInt(video.serieNumber) || 2;
+  const baseReps = video.repetition || "10";
+  
+  // Apply progressive overload by week
+  let adjustedSets = baseSets;
+  
+  // Add sets progressively over weeks (conservative approach)
+  if (weekNum >= 3) adjustedSets += 1;
+  if (weekNum >= 4) adjustedSets += 1;
+  
+  // Cap maximum sets for safety
+  adjustedSets = Math.min(adjustedSets, 5);
+  
+  // Calculate rest time based on intensity and exercise type
+  let restTime = calculateRestTime(intensity);
+  
+  // Override rest time based on exercise characteristics
+  if (video.duration && video.duration !== "") {
+    // Time-based exercises get different rest patterns
+    const durationSeconds = parseInt(video.duration) || 30;
+    restTime = durationSeconds >= 60 ? "90s" : "60s";
+  } else if (baseSets >= 4 || parseInt(baseReps) >= 15) {
+    // High volume exercises need more rest
+    restTime = "75s";
+  }
+  
+  return {
+    sets: adjustedSets,
+    reps: baseReps,
+    restTime: restTime
+  };
+};
+
 const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity, muscleAttackMap) => {
   const categories = Object.keys(videosByCategory);
   const exercises = [];
@@ -702,7 +660,6 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   }
 
   const focusCategoryId = categories[(globalDayNum - 1) % categories.length];
-  // Get the actual name from the mapping or use the muscleAttack from video data
   const categoryVideos = videosByCategory[focusCategoryId] || [];
   const workoutName = muscleAttackMap[focusCategoryId] || 
                      (categoryVideos[0]?.muscleAttackName) || 
@@ -720,27 +677,34 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   }
 
   const allExercises = [...primaryExercises, ...secondaryExercises];
+  
   allExercises.forEach((video, index) => {
+    // Get exercise-specific programming using database values
+    const programming = getExerciseSpecificProgramming(video, intensity, weekNum);
+    
     exercises.push({
       order: index + 1,
       videoId: video.id || `video_${index + 1}`,
-      name: video.name || video.title || `Exercise ${index + 1}`, // Use video name/title
-      duration: video.duration || '30s',
-      sets: calculateSets(intensity, weekNum),
-      reps: calculateReps(intensity, video.duration),
-      restTime: calculateRestTime(intensity),
+      name: video.name || video.title || `Exercise ${index + 1}`,
+      duration: video.duration || '',
+      sets: programming.sets,           // From database + progressive overload
+      reps: programming.reps,           // From database
+      restTime: programming.restTime,   // Calculated based on exercise characteristics
       videoData: {
         url: video.videoUrl || null,
         thumbnail: video.imageUrl || video.thumbnail || null,
         difficulty: video.difficulty || 'easy',
         equipment: video.equipment || 'none',
         muscleAttack: video.muscleAttack || workoutName,
-        muscleAttackName: video.muscleAttackName || workoutName, // Add readable name
+        muscleAttackName: video.muscleAttackName || workoutName,
         typeId: video.typeId || null,
         categoryId: video.categorieId || null,
         exerciseId: video.exerciceId || null,
         atackId: video.atackId || focusCategoryId,
-        levelId: video.levelId || null
+        levelId: video.levelId || null,
+        originalSets: video.serieNumber,      // Store original database values
+        originalReps: video.repetition,       // Store original database values
+        description: video.description        // Include description
       }
     });
   });
@@ -748,30 +712,39 @@ const generateDailyWorkout = (videosByCategory, weekNum, globalDayNum, intensity
   return {
     day: globalDayNum,
     type: 'workout',
-    name: `Day ${globalDayNum} - ${workoutName}`, // Use proper workout name
-    focusArea: workoutName, // Use proper name instead of ID
-    focusAreaId: focusCategoryId, // Keep the ID for reference
+    name: `Day ${globalDayNum} - ${workoutName}`,
+    focusArea: workoutName,
+    focusAreaId: focusCategoryId,
     description: `Focused ${workoutName.toLowerCase()} session`,
     estimatedDuration: calculateTotalWorkoutTime(exercises),
     exercises
   };
 };
 
-// Rest of the functions remain the same...
+// Updated workout intensity calculation with health considerations
 const calculateWorkoutIntensity = (age, weight, level) => {
-  let baseIntensity = 1;
-  if (age < 25) baseIntensity += 0.3;
-  else if (age < 35) baseIntensity += 0.2;
-  else if (age < 45) baseIntensity += 0.1;
-  else if (age > 55) baseIntensity -= 0.2;
-
+  let baseIntensity = 0.6;
+  
+  // Age-based adjustments (conservative approach)
+  if (age >= 65) baseIntensity *= 0.7;
+  else if (age >= 55) baseIntensity *= 0.8;
+  else if (age >= 45) baseIntensity *= 0.9;
+  
+  // Weight-based adjustments using estimated BMI
+  const estimatedBMI = weight / ((170/100) ** 2); // Using average height estimate
+  if (estimatedBMI > 35) baseIntensity *= 0.7;     // Significantly overweight
+  else if (estimatedBMI > 30) baseIntensity *= 0.8; // Moderately overweight
+  else if (estimatedBMI > 25) baseIntensity *= 0.9; // Slightly overweight
+  else if (estimatedBMI < 18.5) baseIntensity *= 0.9; // Underweight
+  
+  // Experience level adjustments
   switch (level.toLowerCase()) {
-    case 'beginner': baseIntensity *= 0.7; break;
+    case 'beginner': baseIntensity *= 0.8; break;
     case 'intermediate': baseIntensity *= 1.0; break;
-    case 'hard': baseIntensity *= 1.3; break;
+    case 'hard': baseIntensity *= 1.1; break;
   }
-
-  return Math.max(0.5, Math.min(2.0, baseIntensity));
+  
+  return Math.max(0.4, Math.min(1.2, baseIntensity));
 };
 
 const groupVideosByAttackMuscle = (videos) => {
@@ -797,18 +770,6 @@ const selectRandomVideos = (videos, count) => {
   if (!videos || videos.length === 0) return [];
   const shuffled = [...videos].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, Math.min(count, videos.length));
-};
-
-const calculateSets = (intensity, weekNum) => {
-  const baseSets = 2 + Math.floor(intensity);
-  const progressiveSets = Math.floor(weekNum / 2);
-  return Math.min(5, Math.max(1, baseSets + progressiveSets));
-};
-
-const calculateReps = (intensity, duration) => {
-  if (typeof duration === 'string' && duration.includes('s')) return duration;
-  const baseReps = 10 + Math.floor(intensity * 5);
-  return `${baseReps}-${baseReps + 5}`;
 };
 
 const calculateRestTime = (intensity) => {
