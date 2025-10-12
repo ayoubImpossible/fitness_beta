@@ -66,7 +66,6 @@ app.use('/api/Bytime', videoByRoutes);
 app.use('/api/Plans', plansRouter); 
 app.use('/api/Workouts', workoutsRouter); 
 app.use('/api/protected',protectedRoutes);
-app.use('/api/protected',protectedRoutes);
 app.use('/api',savedcategoryRouter);
 app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
