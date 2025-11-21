@@ -15,7 +15,9 @@ const upload = require('../middlewares/multer');
 const router = express.Router();
 
 router.post('/type/:typeId/categorie/add',upload.single('file'),addCategoryHandler);//verify
+
 router.get('/type/:typeId/all', getAllCategoriesHandler);//verify
+
 router.get('/type/:typeId/categorie/:categoryId', getCategoryByIdHandler);//verify
 router.get('/type/:typeId/categoriedata/:categoryId',getCategoryHandler);//verify
 router.put('/type/:typeId/update/:categoryId',upload.single('file'), updateCategoryHandler);
