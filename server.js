@@ -70,7 +70,7 @@ app.use('/api',savedcategoryRouter);
 app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
 app.use('/api/Ai', AiRouter);
-app.use('/api/programme',ProgrammeRouter)
+app.use('/api',ProgrammeRouter)
 
 
 
