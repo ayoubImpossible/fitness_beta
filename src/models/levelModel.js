@@ -229,19 +229,26 @@
 
 
 
-const { db } = require('../Firebase/firebaseAdmin');
+
+
+
+
+
+
+const { db, admin } = require('../Firebase/firebaseAdmin');
 
 // ============================================
 // CONFIGURATION DU CACHE ADAPTATIF
 // ============================================
 const CACHE_CONFIG = {
-  videos: 24 * 60 * 60 * 1000,          // 24 heures - modifiées par admin seulement
+  levels: 12 * 60 * 60 * 1000,          // 12 heures - modifiés par admin
+  videos: 24 * 60 * 60 * 1000,          // 24 heures - modifiées par admin
   'videos-filter': 12 * 60 * 60 * 1000, // 12 heures - filtres spécifiques
-  'videos-metadata': 7 * 24 * 60 * 60 * 1000, // 7 jours - equipment/durations types (rarement modifiés)
+  'exercise-videos': 6 * 60 * 60 * 1000, // 6 heures - vidéos d'un exercice
 };
 
 const getCacheDuration = (collectionName) => {
-  return CACHE_CONFIG[collectionName] || 24 * 60 * 60 * 1000; // Default 24 heures
+  return CACHE_CONFIG[collectionName] || 12 * 60 * 60 * 1000; // Default 12 heures
 };
 
 // ============================================
@@ -274,145 +281,305 @@ const invalidateCache = (collectionName = null) => {
 };
 
 // ============================================
-// FONCTIONS OPTIMISÉES AVEC CACHE
+// HELPER FUNCTIONS
 // ============================================
 
-// OPTIMISÉE: Toutes les vidéos avec cache 24h
-const getAllVid = async (forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos', { all: true });
+// Helper to get the videos collection
+const getVideosCollection = (typeId, categoryId, exerciseId, levelId, atackId) => 
+  db.collection('types')
+    .doc(typeId)
+    .collection('categories')
+    .doc(categoryId)
+    .collection('exercises')
+    .doc(exerciseId)
+    .collection('atack')
+    .doc(atackId)
+    .collection('levels')
+    .doc(levelId)
+    .collection('videos');
+
+// ============================================
+// FONCTIONS OPTIMISÉES - LEVELS
+// ============================================
+
+// NOUVELLE: Récupère TOUS les levels avec collection group + cache
+const getAllLevels = async (forceRefresh = false) => {
+  const cacheKey = getCacheKey('levels', { all: true });
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'levels')) {
+    console.log('✅ Cache hit: getAllLevels');
+    return cached.data;
+  }
+  
+  try {
+    console.log('📥 Fetching all levels with collectionGroup...');
+    const snapshot = await db.collectionGroup('levels').get();
+    
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      path: doc.ref.path,
+      ...doc.data()
+    }));
+    
+    cache.set(cacheKey, {
+      data,
+      timestamp: Date.now()
+    });
+    
+    console.log(`📊 Lectures: ${snapshot.size} levels (Cache: 12h)`);
+    return data;
+  } catch (error) {
+    console.error("Error fetching all levels:", error);
+    return [];
+  }
+};
+
+// OPTIMISÉE: Levels d'un exercice avec cache
+const getAllLevelsInExercise = async (typeId, categoryId, exerciseId, atackId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('levels', { typeId, categoryId, exerciseId, atackId });
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'levels')) {
+    console.log('✅ Cache hit: getAllLevelsInExercise');
+    return cached.data;
+  }
+  
+  const levelsRef = db
+    .collection('types')
+    .doc(typeId)
+    .collection('categories')
+    .doc(categoryId)
+    .collection('exercises')
+    .doc(exerciseId)
+    .collection('atack')
+    .doc(atackId)
+    .collection('levels');
+
+  const snapshot = await levelsRef.get();
+  const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+  cache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  console.log(`📊 Lectures: ${snapshot.size} levels (Cache: 12h)`);
+  return data;
+};
+
+// Add level to exercise (avec invalidation cache)
+const addLevelToExercise = async (typeId, categoryId, exerciseId, atackId, levelData) => {
+  const levelsRef = db
+    .collection('types')
+    .doc(typeId)
+    .collection('categories')
+    .doc(categoryId)
+    .collection('exercises')
+    .doc(exerciseId)
+    .collection('atack')
+    .doc(atackId)
+    .collection('levels');
+
+  // IMPORTANT: Ajouter les IDs pour collection group
+  const dataToAdd = {
+    ...levelData,
+    typeId,
+    categorieId: categoryId,
+    exerciceId: exerciseId,
+    atackId,
+    createdAt: new Date()
+  };
+
+  const newLevelRef = levelsRef.doc();
+  await newLevelRef.set(dataToAdd);
+  
+  // Invalide le cache
+  invalidateCache('levels');
+  
+  console.log('✅ Level added, cache invalidated');
+  return { id: newLevelRef.id, ...dataToAdd };
+};
+
+// NOUVELLE: Recherche de levels avec filtres
+const getLevelsOptimized = async (options = {}) => {
+  const {
+    typeId = null,
+    categoryId = null,
+    exerciseId = null,
+    atackId = null,
+    name = null,
+    difficulty = null,
+    limit = null,
+    forceRefresh = false
+  } = options;
+  
+  const cacheKey = getCacheKey('levels', options);
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'levels')) {
+    console.log('✅ Cache hit: getLevelsOptimized');
+    return cached.data;
+  }
+  
+  try {
+    console.log('📥 Fetching levels with collectionGroup and filters...');
+    let query = db.collectionGroup('levels');
+    
+    if (typeId) query = query.where('typeId', '==', typeId);
+    if (categoryId) query = query.where('categorieId', '==', categoryId);
+    if (exerciseId) query = query.where('exerciceId', '==', exerciseId);
+    if (atackId) query = query.where('atackId', '==', atackId);
+    if (name) query = query.where('name', '==', name);
+    if (difficulty) query = query.where('difficulty', '==', difficulty);
+    if (limit) query = query.limit(limit);
+    
+    const snapshot = await query.get();
+    const data = snapshot.docs.map(doc => ({ 
+      id: doc.id,
+      path: doc.ref.path,
+      ...doc.data() 
+    }));
+    
+    cache.set(cacheKey, {
+      data,
+      timestamp: Date.now()
+    });
+    
+    console.log(`📊 Lectures: ${snapshot.size} levels (Cache: 12h)`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching levels:', error);
+    return [];
+  }
+};
+
+// ============================================
+// FONCTIONS OPTIMISÉES - VIDEOS
+// ============================================
+
+// OPTIMISÉE: Toutes les vidéos d'un level avec cache
+const getAllVideosInLevel = async (typeId, categoryId, exerciseId, atackId, levelId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('videos', { typeId, categoryId, exerciseId, atackId, levelId });
   const cached = cache.get(cacheKey);
   
   if (!forceRefresh && isCacheValid(cached, 'videos')) {
-    console.log('✅ Cache hit: getAllVid');
+    console.log('✅ Cache hit: getAllVideosInLevel');
     return cached.data;
   }
   
-  try {
-    console.log('📥 Fetching all videos with collectionGroup...');
-    const videosSnapshot = await db.collectionGroup("videos").get();
+  const snapshot = await getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId).get();
+  const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+  cache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  console.log(`📊 Lectures: ${snapshot.size} vidéos (Cache: 24h)`);
+  return data;
+};
 
-    if (videosSnapshot.empty) {
-      console.log("No videos found");
-      return [];
+// OPTIMISÉE: Vidéo par ID avec cache
+const getVideoById = async (typeId, categoryId, exerciseId, atackId, levelId, videoId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('videos', { typeId, categoryId, exerciseId, atackId, levelId, videoId });
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'videos')) {
+    console.log('✅ Cache hit: getVideoById');
+    return cached.data;
+  }
+  
+  const videoDoc = await getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId)
+    .doc(videoId)
+    .get();
+  
+  if (!videoDoc.exists) throw new Error('Video not found');
+  
+  const data = { id: videoDoc.id, ...videoDoc.data() };
+  
+  cache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  return data;
+};
+
+// OPTIMISÉE: Toutes les vidéos d'un exercice avec cache
+const getVideoCollectionInExercise = async (typeId, categoryId, exerciseId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('exercise-videos', { typeId, categoryId, exerciseId });
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'exercise-videos')) {
+    console.log('✅ Cache hit: getVideoCollectionInExercise');
+    return cached.data;
+  }
+  
+  const videos = [];
+
+  const attacksRef = db.collection('types')
+    .doc(typeId)
+    .collection('categories')
+    .doc(categoryId)
+    .collection('exercises')
+    .doc(exerciseId)
+    .collection('atack');
+
+  const attacksSnapshot = await attacksRef.get();
+
+  for (const attackDoc of attacksSnapshot.docs) {
+    const attackId = attackDoc.id;
+
+    const levelsRef = attacksRef.doc(attackId).collection('levels');
+    const levelsSnapshot = await levelsRef.get();
+
+    for (const levelDoc of levelsSnapshot.docs) {
+      const levelId = levelDoc.id;
+
+      const videosRef = levelsRef.doc(levelId).collection('videos');
+      const videosSnapshot = await videosRef.get();
+
+      for (const videoDoc of videosSnapshot.docs) {
+        videos.push({
+          id: videoDoc.id,
+          attackId,
+          levelId,
+          ...videoDoc.data(),
+        });
+      }
     }
-    
-    const data = videosSnapshot.docs.map((doc) => {
-      const videoData = doc.data();
-      const pathParts = doc.ref.path.split("/");
-      const categoryIndex = pathParts.indexOf("categories");
-      const category = categoryIndex !== -1 ? pathParts[categoryIndex + 1] : "uncategorized";
-
-      return {
-        id: doc.id,
-        path: doc.ref.path,
-        category, 
-        ...videoData,
-      };
-    });
-    
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 Lectures: ${videosSnapshot.size} vidéos (Cache: 24h)`);
-    return data;
-  } catch (error) {
-    console.error("Error fetching all videos:", error);
-    return [];
   }
+  
+  cache.set(cacheKey, {
+    data: videos,
+    timestamp: Date.now()
+  });
+  
+  console.log(`📊 Lectures: ${videos.length} vidéos d'exercice (Cache: 6h)`);
+  return videos;
 };
 
-// OPTIMISÉE: Vidéos par durée avec cache 12h
-const getAllVideosByDuration = async (duration, forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-filter', { duration });
-  const cached = cache.get(cacheKey);
-  
-  if (!forceRefresh && isCacheValid(cached, 'videos-filter')) {
-    console.log('✅ Cache hit: getAllVideosByDuration', duration);
-    return cached.data;
-  }
-  
-  try {
-    console.log('📥 Fetching videos by duration:', duration);
-    const videosSnapshot = await db.collectionGroup("videos")
-      .where("duration", "==", duration)
-      .get();
-
-    const data = videosSnapshot.docs.map(doc => ({
-      id: doc.id,
-      path: doc.ref.path,
-      ...doc.data()
-    }));
-    
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 Lectures: ${videosSnapshot.size} vidéos (Cache: 12h)`);
-    return data;
-  } catch (error) {
-    console.error("Error fetching videos by duration:", error);
-    return [];
-  }
-};
-
-// OPTIMISÉE: Vidéos par équipement avec cache 12h
-const getAllVideosByeq = async (equipment, forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-filter', { equipment });
-  const cached = cache.get(cacheKey);
-  
-  if (!forceRefresh && isCacheValid(cached, 'videos-filter')) {
-    console.log('✅ Cache hit: getAllVideosByeq', equipment);
-    return cached.data;
-  }
-  
-  try {
-    console.log('📥 Fetching videos by equipment:', equipment);
-    const videosSnapshot = await db.collectionGroup("videos")
-      .where("equipment", "==", equipment)
-      .get();
-
-    const data = videosSnapshot.docs.map(doc => ({
-      id: doc.id,
-      path: doc.ref.path,
-      ...doc.data()
-    }));
-    
-    cache.set(cacheKey, {
-      data,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 Lectures: ${videosSnapshot.size} vidéos (Cache: 12h)`);
-    return data;
-  } catch (error) {
-    console.error("Error fetching videos by equipment:", error);
-    return [];
-  }
-};
-
-// OPTIMISÉE: Vidéos par niveau de difficulté avec cache 12h
-const getAllVideosBylevel = async (difficulty, forceRefresh = false) => {
+// OPTIMISÉE: Vidéos par niveau de difficulté avec cache
+const getAllVideosByDifficulty = async (difficulty, forceRefresh = false) => {
   const cacheKey = getCacheKey('videos-filter', { difficulty });
   const cached = cache.get(cacheKey);
   
   if (!forceRefresh && isCacheValid(cached, 'videos-filter')) {
-    console.log('✅ Cache hit: getAllVideosBylevel', difficulty);
+    console.log('✅ Cache hit: getAllVideosByDifficulty', difficulty);
     return cached.data;
   }
   
   try {
     console.log('📥 Fetching videos by difficulty:', difficulty);
-    const videosSnapshot = await db.collectionGroup("videos")
-      .where("difficulty", "==", difficulty)
+    const videosSnapshot = await db.collectionGroup('videos')
+      .where('difficulty', '==', difficulty)
       .get();
 
-    const data = videosSnapshot.docs.map(doc => ({
-      id: doc.id,
-      path: doc.ref.path,
-      ...doc.data()
+    const data = videosSnapshot.docs.map(videoDoc => ({
+      id: videoDoc.id,
+      path: videoDoc.ref.path,
+      ...videoDoc.data(),
     }));
     
     cache.set(cacheKey, {
@@ -428,175 +595,74 @@ const getAllVideosBylevel = async (difficulty, forceRefresh = false) => {
   }
 };
 
-// OPTIMISÉE: Types d'équipement par exercice avec cache 7 jours
-const getAllEquipmentTypes = async (exerciceId, forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-metadata', { equipmentTypes: true, exerciceId });
+// OPTIMISÉE: Vidéos par level name avec cache
+const getAllVideosByL = async (typeId, categoryId, exerciseId, Level, forceRefresh = false) => {
+  const cacheKey = getCacheKey('videos-filter', { typeId, categoryId, exerciseId, Level });
   const cached = cache.get(cacheKey);
   
-  if (!forceRefresh && isCacheValid(cached, 'videos-metadata')) {
-    console.log('✅ Cache hit: getAllEquipmentTypes', exerciceId);
+  if (!forceRefresh && isCacheValid(cached, 'videos-filter')) {
+    console.log('✅ Cache hit: getAllVideosByL');
     return cached.data;
   }
   
-  try {
-    console.log('📥 Fetching equipment types for exercise:', exerciceId);
-    const videosSnapshot = await db.collectionGroup("videos")
-      .where("exerciceId", "==", exerciceId) 
-      .get();
+  const atackRef = db
+    .collection('types')
+    .doc(typeId)
+    .collection('categories')
+    .doc(categoryId)
+    .collection('exercises')
+    .doc(exerciseId)
+    .collection('atack');
 
-    const equipmentSet = new Set();
+  const atackSnapshot = await atackRef.get();
+  const videos = [];
 
-    videosSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.equipment) {
-        equipmentSet.add(data.equipment);
+  for (const atackDoc of atackSnapshot.docs) {
+    const levelsRef = atackDoc.ref.collection('levels');
+    const levelSnapshot = await levelsRef.get();
+
+    for (const levelDoc of levelSnapshot.docs) {
+      const levelData = levelDoc.data();
+
+      if (levelData.name && levelData.name.toLowerCase() === Level.toLowerCase()) {
+        console.log(Level);
+
+        const videosRef = levelDoc.ref.collection('videos'); 
+        const videosSnap = await videosRef.get();
+        videosSnap.forEach(videoDoc => {
+          videos.push({
+            id: videoDoc.id,
+            ...videoDoc.data(),
+            atackId: atackDoc.id,
+            levelId: levelDoc.id
+          });
+        });
+
+        break; 
       }
-    });
-
-    const result = Array.from(equipmentSet);
-    
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 Equipment types: ${result.length} types (Cache: 7 jours)`);
-    return result;
-  } catch (error) {
-    console.error("Error fetching equipment types:", error);
-    throw error;
-  }
-};
-
-// OPTIMISÉE: Tous les types d'équipement avec cache 7 jours
-const getAllEquipmentTypes_2 = async (forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-metadata', { allEquipmentTypes: true });
-  const cached = cache.get(cacheKey);
-  
-  if (!forceRefresh && isCacheValid(cached, 'videos-metadata')) {
-    console.log('✅ Cache hit: getAllEquipmentTypes_2');
-    return cached.data;
-  }
-  
-  try {
-    console.log('📥 Fetching all equipment types...');
-    const snapshot = await db.collectionGroup('videos').get(); 
-    const equipmentSet = new Set();
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.equipment) {
-        equipmentSet.add(data.equipment);
-      }
-    });
-
-    const result = Array.from(equipmentSet);
-    
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 All equipment types: ${result.length} types (Cache: 7 jours)`);
-    return result;
-  } catch (error) {
-    console.error('Error fetching all equipment types:', error);
-    throw error;
-  }
-};
-
-// OPTIMISÉE: Tous les types de difficulté avec cache 7 jours
-const getAllDurationsTypes_2 = async (forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-metadata', { allDifficultyTypes: true });
-  const cached = cache.get(cacheKey);
-  
-  if (!forceRefresh && isCacheValid(cached, 'videos-metadata')) {
-    console.log('✅ Cache hit: getAllDurationsTypes_2');
-    return cached.data;
-  }
-  
-  try {
-    console.log('📥 Fetching all difficulty types...');
-    const snapshot = await db.collectionGroup('videos').get();  
-    const durationSet = new Set();
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.difficulty) {
-        durationSet.add(data.difficulty);
-      }
-    });
-
-    const result = Array.from(durationSet);
-    
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 All difficulty types: ${result.length} types (Cache: 7 jours)`);
-    return result;
-  } catch (error) {
-    console.error('Error fetching all difficulty types:', error);
-    throw error;
-  }
-};
-
-// OPTIMISÉE: Durées par exercice avec cache 7 jours
-const getAllDurationsTypes = async (exerciceId, forceRefresh = false) => {
-  const cacheKey = getCacheKey('videos-metadata', { durationTypes: true, exerciceId });
-  const cached = cache.get(cacheKey);
-  
-  if (!forceRefresh && isCacheValid(cached, 'videos-metadata')) {
-    console.log('✅ Cache hit: getAllDurationsTypes', exerciceId);
-    return cached.data;
-  }
-  
-  try {
-    console.log('📥 Fetching duration types for exercise:', exerciceId);
-    const videosSnapshot = await db.collectionGroup("videos")
-      .where("exerciceId", "==", exerciceId)  
-      .get();
-
-    if (videosSnapshot.empty) {
-      console.log(`No videos found for exercise ${exerciceId}`);
-      return [];
     }
-
-    const durationSet = new Set();
-    videosSnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.duration) {
-        durationSet.add(data.duration);
-      }
-    });
-
-    const result = Array.from(durationSet);
-    
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    });
-    
-    console.log(`📊 Duration types: ${result.length} types (Cache: 7 jours)`);
-    return result;
-  } catch (error) {
-    console.error("Error fetching durations:", error);
-    throw error;
   }
+  
+  cache.set(cacheKey, {
+    data: videos,
+    timestamp: Date.now()
+  });
+  
+  console.log(`📊 Lectures: ${videos.length} vidéos par level (Cache: 12h)`);
+  return videos;
 };
 
-// ============================================
-// NOUVELLE FONCTION: Recherche avancée avec filtres multiples
-// ============================================
-
+// NOUVELLE: Recherche optimisée de vidéos avec filtres multiples
 const getVideosOptimized = async (options = {}) => {
   const {
-    exerciceId = null,
+    typeId = null,
     categoryId = null,
+    exerciseId = null,
+    atackId = null,
+    levelId = null,
+    difficulty = null,
     duration = null,
     equipment = null,
-    difficulty = null,
     limit = null,
     orderBy = 'createdAt',
     orderDirection = 'desc',
@@ -612,15 +678,17 @@ const getVideosOptimized = async (options = {}) => {
   }
   
   try {
-    console.log('📥 Fetching videos with multiple filters...');
+    console.log('📥 Fetching videos with collectionGroup and filters...');
     let query = db.collectionGroup('videos');
     
-    // Applique tous les filtres disponibles
-    if (exerciceId) query = query.where('exerciceId', '==', exerciceId);
+    if (typeId) query = query.where('typeId', '==', typeId);
     if (categoryId) query = query.where('categorieId', '==', categoryId);
+    if (exerciseId) query = query.where('exerciceId', '==', exerciseId);
+    if (atackId) query = query.where('atackId', '==', atackId);
+    if (levelId) query = query.where('levelId', '==', levelId);
+    if (difficulty) query = query.where('difficulty', '==', difficulty);
     if (duration) query = query.where('duration', '==', duration);
     if (equipment) query = query.where('equipment', '==', equipment);
-    if (difficulty) query = query.where('difficulty', '==', difficulty);
     
     query = query.orderBy(orderBy, orderDirection);
     if (limit) query = query.limit(limit);
@@ -640,7 +708,7 @@ const getVideosOptimized = async (options = {}) => {
     console.log(`📊 Lectures: ${snapshot.size} vidéos (Cache: 12h)`);
     return data;
   } catch (error) {
-    console.error('Error fetching videos with filters:', error);
+    console.error('Error fetching videos:', error);
     return [];
   }
 };
@@ -649,43 +717,75 @@ const getVideosOptimized = async (options = {}) => {
 // FONCTIONS DE MODIFICATION (avec invalidation cache)
 // ============================================
 
-const addVideo = async (videoPath, videoData) => {
-  // videoPath exemple: 'types/typeId/categories/catId/exercises/exId/levels/lvlId/videos'
-  const videoRef = db.doc(videoPath).collection('videos');
+// Add a video to a level (avec notification + invalidation cache)
+const addVideoToLevel = async (typeId, categoryId, exerciseId, atackId, levelId, videoData) => {
+  const videosCollection = getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId);
   
+  // IMPORTANT: Ajouter tous les IDs pour collection group
   const dataToAdd = {
     ...videoData,
+    typeId,
+    categorieId: categoryId,  // Utilise votre convention de nommage
+    exerciceId: exerciseId,   // Utilise votre convention de nommage
+    atackId,
+    levelId,
     createdAt: new Date()
   };
   
-  const videoDoc = await videoRef.add(dataToAdd);
+  const videoDoc = await videosCollection.add(dataToAdd);
+
+  // Create a notification with full context
+  const notificationRef = db.collection('notifications');
+  await notificationRef.add({
+    message: `A new video "${videoData.name}" has been added.`,
+    videoId: videoDoc.id,
+    typeId,
+    categoryId,
+    exerciseId,
+    levelId,
+    atackId,
+    imageUrl: videoData.imageUrl,
+    type: 'video',
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    isRead: false,
+  });
   
-  // Invalide tous les caches vidéos
+  // Invalide le cache
   invalidateCache('videos');
+  invalidateCache('exercise-videos');
   
   console.log('✅ Video added, cache invalidated');
-  return videoDoc.id;
+  return { id: videoDoc.id, ...dataToAdd };
 };
 
-const updateVideo = async (videoPath, videoId, updatedData) => {
-  const videoRef = db.doc(videoPath).collection('videos').doc(videoId);
+// Update a video in a level (avec invalidation cache)
+const updateVideoInLevel = async (typeId, categoryId, exerciseId, atackId, levelId, videoId, updatedData) => {
+  const videoDoc = getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId).doc(videoId);
   
-  await videoRef.update({
+  await videoDoc.update({
     ...updatedData,
     updatedAt: new Date()
   });
   
-  // Invalide tous les caches vidéos
+  // Invalide le cache
   invalidateCache('videos');
+  invalidateCache('exercise-videos');
   
   console.log('✅ Video updated, cache invalidated');
+  
+  const updatedVideo = await videoDoc.get();
+  return { id: updatedVideo.id, ...updatedVideo.data() };
 };
 
-const deleteVideo = async (videoPath, videoId) => {
-  await db.doc(videoPath).collection('videos').doc(videoId).delete();
+// NOUVELLE: Supprimer une vidéo
+const deleteVideo = async (typeId, categoryId, exerciseId, atackId, levelId, videoId) => {
+  await getVideosCollection(typeId, categoryId, exerciseId, levelId, atackId)
+    .doc(videoId)
+    .delete();
   
-  // Invalide tous les caches vidéos
+  // Invalide le cache
   invalidateCache('videos');
+  invalidateCache('exercise-videos');
   
   console.log('✅ Video deleted, cache invalidated');
 };
@@ -744,10 +844,10 @@ const clearExpiredCache = () => {
   return clearedCount;
 };
 
-// Nettoyage automatique toutes les 12 heures
+// Nettoyage automatique toutes les 6 heures
 setInterval(() => {
   clearExpiredCache();
-}, 12 * 60 * 60 * 1000);
+}, 6 * 60 * 60 * 1000);
 
 // ============================================
 // EXPORTS
@@ -755,19 +855,20 @@ setInterval(() => {
 
 module.exports = {
   // Fonctions existantes optimisées
-  getAllEquipmentTypes,
-  getAllDurationsTypes,
-  getAllVid,
-  getAllVideosBylevel,
-  getAllDurationsTypes_2,
-  getAllEquipmentTypes_2,
-  getAllVideosByDuration,
-  getAllVideosByeq,
+  addVideoToLevel,
+  updateVideoInLevel,
+  getAllVideosInLevel,
+  getVideoById,
+  getAllLevelsInExercise,
+  addLevelToExercise,
+  getVideoCollectionInExercise,
+  getAllVideosByL,
+  getAllVideosByDifficulty,
   
-  // Nouvelles fonctions
+  // Nouvelles fonctions optimisées
+  getAllLevels,
+  getLevelsOptimized,
   getVideosOptimized,
-  addVideo,
-  updateVideo,
   deleteVideo,
   invalidateCache,
   getCacheStats,
