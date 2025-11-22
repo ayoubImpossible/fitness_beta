@@ -14,7 +14,7 @@ const savedcategoryRouter = require('./src/router/savedRouter');
 const profileRouter=require('./src/router/profileRouter')
 const searchRouter=require('./src/router/searchRouter')
 const AiRouter=require('./src/router/aiRouter')
-
+const ProgrammeRouter=require('./src/router/ProgrammeRouter')
 
 const helmet =require('helmet') ;
 const bodyParser =require('body-parser') ;
@@ -70,6 +70,7 @@ app.use('/api',savedcategoryRouter);
 app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
 app.use('/api/Ai', AiRouter);
+app.use('/api/programme',ProgrammeRouter)
 
 
 
