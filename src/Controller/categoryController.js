@@ -229,4 +229,3 @@ module.exports = {
   updateCategorySavedStatus,
   getCountVideosInCategorie
 };
-
