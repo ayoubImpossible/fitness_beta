@@ -80,7 +80,7 @@ const getProgramsByPhaseType = async (req, res) => {
     const { type } = req.params;
     const forceRefresh = req.query.refresh === 'true';
     
-    if (!['yoga', 'relax', 'musculation'].includes(type)) {
+    if (!['yoga', 'relax', 'musculation','cardio'].includes(type)) {
       return res.status(400).json({
         success: false,
         error: 'Type invalide. Types acceptés: yoga, relax, musculation'
