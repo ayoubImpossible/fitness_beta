@@ -315,7 +315,7 @@ const addPhaseToProgram = async (req, res) => {
       });
     }
     
-    if (!type || !['yoga', 'relax', 'musculation'].includes(type)) {
+    if (!type || !['yoga', 'relax', 'musculation','cardio'].includes(type)) {
       return res.status(400).json({
         success: false,
         error: 'Le type doit être: yoga, relax ou musculation'
