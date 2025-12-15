@@ -546,19 +546,7 @@ const addVideoToDay = async (req, res) => {
    const imageFile = req.files?.image?.[0];
 
      
-    if (!videoUrl || videoUrl.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        error: 'L\'URL de la vidéo est requise'
-      });
-    }
-    
-    if (!titre || titre.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        error: 'Le titre de la vidéo est requis'
-      });
-    }
+   
     const videoUrl = await uploadVideoToStorage(videoFile);
     const imageUrl = await uploadImage(imageFile);
 
