@@ -146,7 +146,7 @@ const uploadVideoToStorage = (file) => {
       try {
         const [videoUrl] = await fileUpload.getSignedUrl({
           action: 'read',
-          expires: '03-01-2500', // Set a far future expiration date
+          expires: '03-01-2040', // Set a far future expiration date
         });
         resolve(videoUrl);
       } catch (error) {

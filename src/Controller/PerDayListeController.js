@@ -543,7 +543,7 @@ const addVideoToDay = async (req, res) => {
     const {  titre, description, order, duration } = req.body;
     
     const videoFile = req.files?.video?.[0];
-   const imageFile = req.files?.image?.[0];
+    const imageFile = req.files?.image?.[0];
 
      
    
