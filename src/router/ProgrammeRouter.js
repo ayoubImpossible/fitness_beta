@@ -1,7 +1,11 @@
 const express = require('express');
 const programController = require('../Controller/PerDayListeController');
 const uploade = require('../middlewares/multerFiel');
-
+const {
+  
+   addVideoToDay
+ 
+} = require('../Controller/PerDayListeController');
 const router = express.Router();
 
 // ============================================
@@ -40,7 +44,7 @@ router.delete('/programs/:programId/phases/:phaseId/days/:dayId', programControl
 // ============================================
 router.get('/programs/:programId/phases/:phaseId/days/:dayId/videos', programController.getVideosByDay);
 router.get('/videos', programController.getAllDayVideos);
-router.post('/programs/:programId/phases/:phaseId/days/:dayId/videos',uploade, programController.addVideoToDay);
+router.post('/programs/:programId/phases/:phaseId/days/:dayId/videos',uploade, addVideoToDay);
 router.put('/programs/:programId/phases/:phaseId/days/:dayId/videos/:videoId', programController.updateVideo);
 router.delete('/programs/:programId/phases/:phaseId/days/:dayId/videos/:videoId', programController.deleteVideo);
 
