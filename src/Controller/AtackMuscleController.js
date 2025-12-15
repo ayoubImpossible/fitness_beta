@@ -86,9 +86,6 @@ const { addAtack_To_Exercice, getAllAtacks, getAtackById, update_Atack_In_Exerci
     }
   };
 
-
-
-
   // Delete an exercise
   const deleteAtackHandler = async (req, res) => {
     const { typeId,categoryId,exerciseId,atackId } = req.params;
@@ -178,59 +175,6 @@ const { addAtack_To_Exercice, getAllAtacks, getAtackById, update_Atack_In_Exerci
 
 
 
-
-  /*
-const getVideosByMuscleAttack = async (req, res) => {
-    try {
-      const { muscleAttack } = req.params; // Get muscleAttack from request parameters
-      const typesSnapshot = await db.collection('types').get();
-      
-      let results = [];
-  
-      for (const typeDoc of typesSnapshot.docs) {
-        const typeId = typeDoc.id;
-        const categoriesSnapshot = await db.collection('types').doc(typeId).collection('categories').get();
-        
-        for (const categoryDoc of categoriesSnapshot.docs) {
-          const categoryId = categoryDoc.id;
-          const exercisesSnapshot = await db.collection('types').doc(typeId)
-            .collection('categories').doc(categoryId)
-            .collection('exercises').get();
-          
-          for (const exerciseDoc of exercisesSnapshot.docs) {
-            const exerciseId = exerciseDoc.id;
-            const atackSnapshot = await db.collection('types').doc(typeId)
-              .collection('categories').doc(categoryId)
-              .collection('exercises').doc(exerciseId)
-              .collection('atack')
-              .where('muscleAttack', '==', muscleAttack)
-              .get();
-            
-            for (const atackDoc of atackSnapshot.docs) {
-              const atackId = atackDoc.id;
-  
-              // Fetch videos related to this attack
-              const levels = await getLevelsWithVideos(typeId, categoryId, exerciseId, atackId);
-  
-              results.push({
-                typeId,
-                categoryId,
-                exerciseId,
-                atackId,
-                atackName: atackDoc.data().name,
-                videos: levels,
-              });
-            }
-          }
-        }
-      }
-  
-      res.status(200).json({ message: "Videos retrieved successfully", results });
-    } catch (error) {
-      console.error("Error fetching videos:", error);
-      res.status(500).json({ error: error.message });
-    }
-  };*/
   
   
   module.exports = { 

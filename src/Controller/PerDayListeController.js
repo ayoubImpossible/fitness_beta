@@ -1,4 +1,5 @@
 const programService = require('../models/ListePerDayModel');
+const { uploadVideoToStorage, uploadImage } = require('../Utils/Helpers');
 
 // ============================================
 // PROGRAM CONTROLLERS
@@ -539,8 +540,12 @@ const getAllDayVideos = async (req, res) => {
 const addVideoToDay = async (req, res) => {
   try {
     const { programId, phaseId, dayId } = req.params;
-    const { videoUrl, titre, description, imageUrl, order, duration } = req.body;
+    const {  titre, description, order, duration } = req.body;
     
+    const videoFile = req.files?.video?.[0];
+   const imageFile = req.files?.image?.[0];
+
+     
     if (!videoUrl || videoUrl.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -554,6 +559,9 @@ const addVideoToDay = async (req, res) => {
         error: 'Le titre de la vidéo est requis'
       });
     }
+    const videoUrl = await uploadVideoToStorage(videoFile);
+    const imageUrl = await uploadImage(imageFile);
+
     
     const video = await programService.addVideoToDay(programId, phaseId, dayId, {
       videoUrl,

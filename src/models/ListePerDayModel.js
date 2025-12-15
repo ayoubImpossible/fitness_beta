@@ -626,7 +626,6 @@ const deleteDay = async (programId, phaseId, dayId) => {
  */
 const addVideoToDay = async (programId, phaseId, dayId, videoData) => {
   const { videoUrl, titre, description, imageUrl, order, duration } = videoData;
-  
   const videoDoc = await ProgramsRef.doc(programId)
     .collection('phases')
     .doc(phaseId)
