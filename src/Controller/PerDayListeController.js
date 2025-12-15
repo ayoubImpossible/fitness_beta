@@ -538,18 +538,19 @@ const getAllDayVideos = async (req, res) => {
 };
 
 const addVideoToDay = async (req, res) => {
+
+  const videoUrl = await uploadVideoToStorage(req.files.video[0]);
+ const imageUrl = await uploadImage(req.files.image[0]);
+
   try {
     const { programId, phaseId, dayId } = req.params;
     const {  titre, description, order, duration } = req.body;
     
-    const videoFile = req.files?.video?.[0];
-    const imageFile = req.files?.image?.[0];
-
+   
+    
      
    
-    const videoUrl = await uploadVideoToStorage(videoFile);
-    const imageUrl = await uploadImage(imageFile);
-
+   
     
     const video = await programService.addVideoToDay(programId, phaseId, dayId, {
       videoUrl,
