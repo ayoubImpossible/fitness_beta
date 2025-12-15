@@ -537,14 +537,14 @@ const getAllDayVideos = async (req, res) => {
   }
 };
 
-const addVideoToDay = async (req, res) => {
+// const addVideoToDay = async (req, res) => {
 
-  const videoUrl = await uploadVideoToStorage(req.files.video[0]);
- const imageUrl = await uploadImage(req.files.image[0]);
+//   const videoUrl = await uploadVideoToStorage(req.files.video[0]);
+//  const imageUrl = await uploadImage(req.files.image[0]);
 
-  try {
-    const { programId, phaseId, dayId } = req.params;
-    const {  titre, description, order, duration } = req.body;
+//   try {
+//     const { programId, phaseId, dayId } = req.params;
+//     const {  titre, description, order, duration } = req.body;
     
    
     
@@ -552,13 +552,79 @@ const addVideoToDay = async (req, res) => {
    
    
     
+//     const video = await programService.addVideoToDay(programId, phaseId, dayId, {
+//       videoUrl,
+//       titre,
+//       description,
+//       imageUrl,
+//       order,
+//       duration
+//     });
+    
+//     res.status(201).json({
+//       success: true,
+//       message: 'Vidéo ajoutée avec succès',
+//       data: video
+//     });
+//   } catch (error) {
+//     console.error('Error in addVideoToDay:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Erreur lors de la création de la vidéo'
+//     });
+//   }
+// };
+
+
+const addVideoToDay = async (req, res) => {
+  try {
+    const { programId, phaseId, dayId } = req.params;
+    const { titre, description, order, duration } = req.body;
+    const videoFile = req.files?.video?.[0];
+    const imageFile = req.files?.image?.[0];
+    
+    // Validation des champs requis
+    if (!titre || titre.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Le titre de la vidéo est requis'
+      });
+    }
+    
+    if (!videoFile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le fichier vidéo est requis'
+      });
+    }
+    
+    if (!imageFile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le fichier image est requis'
+      });
+    }
+    
+    // Log file sizes for debugging
+    console.log('📦 Video file size:', (videoFile.size / 1024 / 1024).toFixed(2), 'MB');
+    console.log('📦 Image file size:', (imageFile.size / 1024).toFixed(2), 'KB');
+    
+    // Upload des fichiers
+    console.log('📤 Uploading video and image...');
+    const videoUrl = await uploadVideoToStorage(videoFile);
+    console.log('✅ Video uploaded:', videoUrl);
+    
+    const imageUrl = await uploadImage(imageFile);
+    console.log('✅ Image uploaded:', imageUrl);
+    
+    // Créer la vidéo avec les URLs
     const video = await programService.addVideoToDay(programId, phaseId, dayId, {
       videoUrl,
       titre,
-      description,
+      description: description || '',
       imageUrl,
-      order,
-      duration
+      order: order ? parseInt(order) : 0,
+      duration: duration ? parseInt(duration) : 0
     });
     
     res.status(201).json({
@@ -567,14 +633,14 @@ const addVideoToDay = async (req, res) => {
       data: video
     });
   } catch (error) {
-    console.error('Error in addVideoToDay:', error);
+    console.error('❌ Error in addVideoToDay:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: 'Erreur lors de la création de la vidéo'
+      error: error.message || 'Erreur lors de la création de la vidéo'
     });
   }
 };
-
 const updateVideo = async (req, res) => {
   try {
     const { programId, phaseId, dayId, videoId } = req.params;
