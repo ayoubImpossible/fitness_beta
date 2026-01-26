@@ -15,7 +15,7 @@ const profileRouter=require('./src/router/profileRouter')
 const searchRouter=require('./src/router/searchRouter')
 const AiRouter=require('./src/router/aiRouter')
 const ProgrammeRouter=require('./src/router/ProgrammeRouter')
-
+const likePlan=require('./src/router/likeRouter')
 const helmet =require('helmet') ;
 const bodyParser =require('body-parser') ;
 const cookieParser =require( 'cookie-parser') ;
@@ -67,6 +67,7 @@ app.use('/api/Plans', plansRouter);
 app.use('/api/Workouts', workoutsRouter); 
 app.use('/api/protected',protectedRoutes);
 app.use('/api',savedcategoryRouter);
+app.use('api/like',likePlan);
 app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
 app.use('/api/Ai', AiRouter);
