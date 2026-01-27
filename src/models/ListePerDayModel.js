@@ -854,11 +854,27 @@ setInterval(() => {
   clearExpiredCache();
 }, 6 * 60 * 60 * 1000);
 
+
+
+
+const updatePlanLike = async (planId, updatedData) => {
+  const planref = db.collection('construire')
+    .doc(planId)
+  
+  await planref.update({
+    ...updatedData,
+    planId, // S'assure que planId est toujours présent
+    updatedAt: new Date()
+  });
+  
+  console.log('✅ Plan updated successfully');
+};
 // ============================================
 // EXPORTS
 // ============================================
 module.exports = {
   // Programme
+  updatePlanLike,
   createProgram,
   getAllPrograms,
   getProgramById,

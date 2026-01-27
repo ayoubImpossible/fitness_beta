@@ -474,6 +474,51 @@ const updateDay = async (req, res) => {
   }
 };
 
+
+
+
+
+
+const updatePlanLikeStatus = async (req, res) => {
+  const { planId, uid } = req.params;
+  const { like } = req.body; 
+
+  if (!uid) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    const plan = await programService.getProgramById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    let likedBy = plan.likedBy || []; // Ensure we have an array
+    if (like) {
+      // Add uid if not already present
+      if (!likedBy.includes(uid)) {
+        likedBy.push(uid);
+      }
+    } else {
+      // Remove uid from likedBy array
+      likedBy = likedBy.filter(userId => userId !== uid);
+    }
+
+    await programService.updatePlanLike(planId, { likedBy });
+
+    res.status(200).json({ message: "Like status updated successfully", likedBy });
+  } catch (error) {
+    console.error("Error updating saved status:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+
+
 const deleteDay = async (req, res) => {
   try {
     const { programId, phaseId, dayId } = req.params;
@@ -694,7 +739,6 @@ module.exports = {
   createProgram,
   updateProgram,
   deleteProgram,
-  
   // Phase
   getPhasesByProgram,
   getAllPhases,
@@ -715,5 +759,6 @@ module.exports = {
   getAllDayVideos,
   addVideoToDay,
   updateVideo,
-  deleteVideo
+  deleteVideo,
+  updatePlanLikeStatus
 };
