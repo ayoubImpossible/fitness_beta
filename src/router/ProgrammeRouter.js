@@ -19,7 +19,9 @@ router.get('/programs/by-muscle/:muscle', programController.getProgramsByMuscle)
 router.post('/programs', programController.createProgram);
 router.put('/programs/:programId', programController.updateProgram);
 router.delete('/programs/:programId', programController.deleteProgram);
+
 router.patch('/programs/:planId/:uid', programController.updatePlanLikeStatus);
+router.patch('/programs/:exerciceId/:uid', programController.updateExerciceLikeStatus);
 
 // ============================================
 // PHASE ROUTES

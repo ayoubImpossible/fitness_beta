@@ -478,6 +478,7 @@ const updateDay = async (req, res) => {
 
 
 
+// Like/Dislike Plan Controller
 
 const updatePlanLikeStatus = async (req, res) => {
   const { planId, uid } = req.params;
@@ -513,8 +514,42 @@ const updatePlanLikeStatus = async (req, res) => {
   }
 };
 
+// Like/Dislike Exercice Controller
+
+const updateExerciceLikeStatus = async (req, res) => {
+  const { exerciceId, uid } = req.params;
+  const { like } = req.body;
+ if (!uid) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    const exercice = await programService.getExerciceById(exerciceId);
+    if (!exercice) {
+      return res.status(404).json({ message: "Exercice not found" });
+    }
+
+    let likedBy = exercice.likedBy || []; // Ensure we have an array
+    if (like) {
+      // Add uid if not already present
+      if (!likedBy.includes(uid)) {
+        likedBy.push(uid);
+      }
+    } else {
+      // Remove uid from likedBy array
+      likedBy = likedBy.filter(userId => userId !== uid);
+    }
+
+    await programService.updateExerciceLike(exerciceId, { likedBy });
+
+    res.status(200).json({ message: "Like status updated successfully", likedBy });
+  } catch (error) {
+    console.error("Error updating saved status:", error);
+    res.status(500).json({ error: error.message });
+  }
 
 
+}
 
 
 
@@ -760,5 +795,6 @@ module.exports = {
   addVideoToDay,
   updateVideo,
   deleteVideo,
-  updatePlanLikeStatus
+  updatePlanLikeStatus,
+  updateExerciceLikeStatus
 };

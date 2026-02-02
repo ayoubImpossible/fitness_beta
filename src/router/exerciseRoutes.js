@@ -16,6 +16,7 @@ router.get('/type/:typeId/categories/:categoryId/exercises/:exerciseId/atack/:at
 
 
 
+
 module.exports = router;
 
 

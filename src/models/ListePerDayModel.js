@@ -8,6 +8,8 @@ const CACHE_CONFIG = {
   'phases': 12 * 60 * 60 * 1000,          // 12 heures
   'days': 6 * 60 * 60 * 1000,             // 6 heures
   'day-videos': 6 * 60 * 60 * 1000,       // 6 heures
+  'exercices': 12 * 60 * 60 * 1000,  // Add this line
+
 };
 
 const getCacheDuration = (collectionName) => {
@@ -47,7 +49,7 @@ const invalidateCache = (collectionName = null) => {
 // RÉFÉRENCES
 // ============================================
 const ProgramsRef = db.collection('construire');
-
+const exercicesRef = db.collection('PreparerExercices');
 // ============================================
 // STRUCTURE:
 // construire (collection)
@@ -146,6 +148,32 @@ const getProgramById = async (programId, forceRefresh = false) => {
   }
   
   const doc = await ProgramsRef.doc(programId).get();
+  
+  if (!doc.exists) {
+    return null;
+  }
+  
+  const data = { id: doc.id, ...doc.data() };
+  
+  cache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  return data;
+};
+
+
+const getExerciceById = async (exerciceId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('exercices', { exerciceId });
+  const cached = cache.get(cacheKey);
+  
+  if (!forceRefresh && isCacheValid(cached, 'exercices')) {
+    console.log('✅ Cache hit: getExerciceById');
+    return cached.data;
+  }
+  
+  const doc = await exercicesRef.doc(exerciceId).get();
   
   if (!doc.exists) {
     return null;
@@ -869,12 +897,26 @@ const updatePlanLike = async (planId, updatedData) => {
   
   console.log('✅ Plan updated successfully');
 };
+
+
+const updateExerciceLike = async (exerciceId, updatedData) => {
+  const exerciceRef = exercicesRef.doc(exerciceId);
+  
+  await exerciceRef.update({
+    ...updatedData,
+    planId, // S'assure que planId est toujours présent
+    updatedAt: new Date()
+  });
+  
+  console.log('✅ Exercice updated successfully');
+};
 // ============================================
 // EXPORTS
 // ============================================
 module.exports = {
   // Programme
   updatePlanLike,
+  updateExerciceLike,
   createProgram,
   getAllPrograms,
   getProgramById,
@@ -909,5 +951,6 @@ module.exports = {
   getFullProgramStructure,
   invalidateCache,
   getCacheStats,
-  clearExpiredCache
+  clearExpiredCache,
+  getExerciceById
 };
