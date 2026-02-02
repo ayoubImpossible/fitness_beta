@@ -21,7 +21,7 @@ router.put('/programs/:programId', programController.updateProgram);
 router.delete('/programs/:programId', programController.deleteProgram);
 
 router.patch('/programs/:planId/:uid', programController.updatePlanLikeStatus);
-router.patch('/programs/:exerciceId/:uid', programController.updateExerciceLikeStatus);
+router.patch('/exericice/:exerciceId/:uid', programController.updateExerciceLikeStatus);
 
 // ============================================
 // PHASE ROUTES
