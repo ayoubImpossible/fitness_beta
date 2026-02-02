@@ -904,7 +904,7 @@ const updateExerciceLike = async (exerciceId, updatedData) => {
   
   await exerciceRef.update({
     ...updatedData,
-    planId, // S'assure que planId est toujours présent
+    exerciceId, // S'assure que exerciceId est toujours présent
     updatedAt: new Date()
   });
   
