@@ -16,6 +16,7 @@ const searchRouter=require('./src/router/searchRouter')
 const AiRouter=require('./src/router/aiRouter')
 const ProgrammeRouter=require('./src/router/ProgrammeRouter')
 const likePlan=require('./src/router/likeRouter')
+const tiktokRouter=require('./src/router/tiktokRouter')
 const helmet =require('helmet') ;
 const bodyParser =require('body-parser') ;
 const cookieParser =require( 'cookie-parser') ;
@@ -72,6 +73,7 @@ app.use('/api/profile',profileRouter);
 app.use('/api',searchRouter)
 app.use('/api/Ai', AiRouter);
 app.use('/api',ProgrammeRouter)
+app.use('/api/tiktok', tiktokRouter);
 
 
 
