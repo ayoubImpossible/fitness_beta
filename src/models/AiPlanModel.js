@@ -437,48 +437,13 @@ const getMuscleAttackMapping = async () => {
   }
 };
 
-// For weeks, we'll use the same approach but look for week collections
-const getWeekMapping = async () => {
-  try {
-    // Try different possible week collection names
-    let weekSnapshot;
-    const possibleNames = ['week', 'weeks', 'semaine', 'semaines'];
-    
-    for (const name of possibleNames) {
-      weekSnapshot = await db.collectionGroup(name).get();
-      if (!weekSnapshot.empty) {
-        console.log(`Found week collection: ${name} with ${weekSnapshot.size} documents`);
-        break;
-      }
-    }
-    
-    const mapping = {};
-    
-    if (weekSnapshot && !weekSnapshot.empty) {
-      weekSnapshot.forEach(doc => {
-        const data = doc.data();
-        console.log(`Week doc ${doc.id}:`, data);
-        mapping[doc.id] = data.name || data.weekName || data.muscleAttack || `Week ${doc.id}`;
-      });
-    } else {
-      console.log('No week collections found, using default names');
-      mapping['week1'] = 'Foundation Week';
-      mapping['week2'] = 'Building Week';
-      mapping['week3'] = 'Strength Week';
-      mapping['week4'] = 'Peak Performance Week';
-    }
-    return mapping;
-  } catch (error) {
-    console.error('Error fetching week mapping from group collection:', error);
-    // Return default mapping as fallback
-    return {
-      'week1': 'Foundation Week',
-      'week2': 'Building Week', 
-      'week3': 'Strength Week',
-      'week4': 'Peak Performance Week'
-    };
-  }
-};
+// Pure constant - no DB reads needed, week names are static
+const getWeekMapping = () => ({
+  week1: 'Foundation Week',
+  week2: 'Building Week',
+  week3: 'Strength Week',
+  week4: 'Peak Performance Week',
+});
 
 const generatePersonalizedPlan = async (userParams) => {
   const { age, weight, level, equippment, userId } = userParams;
@@ -496,7 +461,7 @@ const generatePersonalizedPlan = async (userParams) => {
 
     const [muscleAttackMap, weekMap] = await Promise.all([
       getMuscleAttackMapping(),
-      getWeekMapping()
+      Promise.resolve(getWeekMapping())
     ]);
 
     const videosSnapshot = await db.collectionGroup('videos').get();
