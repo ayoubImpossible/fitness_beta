@@ -317,46 +317,24 @@ const getVideoCountByCategoryId = async (categoryId, forceRefresh = false) => {
   }
   
   try {
-    const typesSnapshot = await db.collection('types').get();
+    // BEFORE: 6 nested loops (types → categories → exercises → atacks → levels → videos) = ~35 reads
+    // AFTER:  single collectionGroup query filtered by categorieId = 1 read
+    const videosSnapshot = await db.collectionGroup('videos')
+      .where('categorieId', '==', categoryId)
+      .get();
 
-    for (const typeDoc of typesSnapshot.docs) {
-      const categoriesRef = typeDoc.ref.collection('categories');
-      const categoryDoc = await categoriesRef.doc(categoryId).get();
-
-      if (categoryDoc.exists) {
-        let totalVideoCount = 0;
-
-        const exercisesSnapshot = await categoryDoc.ref.collection('exercises').get();
-        for (const exerciseDoc of exercisesSnapshot.docs) {
-          const atackSnapshot = await exerciseDoc.ref.collection('atack').get();
-
-          for (const atackDoc of atackSnapshot.docs) {
-            const levelsSnapshot = await atackDoc.ref.collection('levels').get();
-
-            for (const levelDoc of levelsSnapshot.docs) {
-              const videosSnapshot = await levelDoc.ref.collection('videos').get();
-              totalVideoCount += videosSnapshot.size;
-            }
-          }
-        }
-
-        const result = {
-          categoryId,
-          videoCount: totalVideoCount
-        };
-        
-        // Cache le résultat
-        cache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now()
-        });
-        
-        console.log(`📊 Video count: ${totalVideoCount} (Cache: 24h)`);
-        return result;
-      }
-    }
-
-    throw new Error(`Category with ID ${categoryId} not found`);
+    const result = {
+      categoryId,
+      videoCount: videosSnapshot.size
+    };
+    
+    cache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
+    
+    console.log(`📊 Video count: ${result.videoCount} (Cache: 24h)`);
+    return result;
   } catch (error) {
     console.error('Error counting videos:', error);
     throw error;
