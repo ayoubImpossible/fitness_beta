@@ -1,31 +1,23 @@
 const { db } = require('../Firebase/firebaseAdmin');
-const typesRef = db.collection('types');
 
-
+/**
+ * Single collectionGroup query = 1 read regardless of how many types exist.
+ * Requires 'savedBy' field to have Collection group scope enabled in
+ * Firebase Console → Firestore → Indexes → Single field → categories → savedBy
+ */
 const getAllSavedCategoriesByUid = async (uid) => {
-  
   try {
+    const snapshot = await db
+      .collectionGroup('categories')
+      .where('savedBy', 'array-contains', uid)
+      .get();
 
-    const savedCategories = [];
-
-    const typesSnapshot = await typesRef.get();
-
-    for (const doc of typesSnapshot.docs) {
-
-      const categoriesRef = doc.ref.collection('categories');
-
-      const categoriesSnapshot = await categoriesRef.where('savedBy', 'array-contains', uid).get();
-
-      categoriesSnapshot.forEach(catDoc => {
-
-        savedCategories.push({ id: catDoc.id, ...catDoc.data() });
-      });
-    }
-
-    return savedCategories;
-
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
   } catch (error) {
-    console.error("Error fetching saved categories for UID:", error);
+    console.error('Error fetching saved categories for UID:', error);
     return [];
   }
 };
