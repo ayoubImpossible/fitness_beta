@@ -17,47 +17,24 @@ const AiRouter=require('./src/router/aiRouter')
 const ProgrammeRouter=require('./src/router/ProgrammeRouter')
 const likePlan=require('./src/router/likeRouter')
 const tiktokRouter=require('./src/router/tiktokRouter')
+const adminRouter=require('./src/router/adminRouter')
 const helmet =require('helmet') ;
 const bodyParser =require('body-parser') ;
 const cookieParser =require( 'cookie-parser') ;
 
 const cors = require('cors');
-const verifyToken = require('./src/Utils/VerifyToken');
-const { db } = require('./src/Firebase/firebaseAdmin');
 const app=express();
-
-
 app.use(express.json());
-
 dotenv.config();
-
 app.use(express.urlencoded({extended:true}))
-
 app.use(cors());
-
 app.use(helmet());
-
 app.use(bodyParser.json());
-
 app.use(cookieParser());
 
 app.disable('x-powered-by');
+
 app.use('/api/exercises', exerciseRoutes);
-
-// app.get('/test',(req,res)=>{
-
-//   const test = async () => {
-//   try {
-//     const snapshot = await db.collectionGroup("videos").limit(1).get();
-//     console.log("Docs found:", snapshot.size);
-//   } catch (err) {
-//     console.error("Test query failed:", err);
-//   }
-// };
-
-// test();
-
-// });
 app.use('/api/users', userRoutes);    
 app.use('/api/categorie', categorieRoutes); 
 app.use('/api/video', levelRoutes);
@@ -74,11 +51,11 @@ app.use('/api',searchRouter)
 app.use('/api/Ai', AiRouter);
 app.use('/api',ProgrammeRouter)
 app.use('/api/tiktok', tiktokRouter);
+app.use('/api/admin', adminRouter);
 
 
 
 
-// Default route
 app.get('/', (req, res) => {
   res.send('Fitness App API is running!');
 });
