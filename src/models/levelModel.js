@@ -280,41 +280,18 @@ const getVideoCollectionInExercise = async (typeId, categoryId, exerciseId, forc
     console.log('✅ Cache hit: getVideoCollectionInExercise');
     return cached.data;
   }
-  
-  const videos = [];
 
-  const attacksRef = db.collection('types')
-    .doc(typeId)
-    .collection('categories')
-    .doc(categoryId)
-    .collection('exercises')
-    .doc(exerciseId)
-    .collection('atack');
+  // BEFORE: nested loops (atacks → levels → videos) = N×M reads
+  // AFTER:  single collectionGroup query filtered by exerciceId = 1 read
+  // Requires videos/exerciceId index (already active)
+  const videosSnapshot = await db.collectionGroup('videos')
+    .where('exerciceId', '==', exerciseId)
+    .get();
 
-  const attacksSnapshot = await attacksRef.get();
-
-  for (const attackDoc of attacksSnapshot.docs) {
-    const attackId = attackDoc.id;
-
-    const levelsRef = attacksRef.doc(attackId).collection('levels');
-    const levelsSnapshot = await levelsRef.get();
-
-    for (const levelDoc of levelsSnapshot.docs) {
-      const levelId = levelDoc.id;
-
-      const videosRef = levelsRef.doc(levelId).collection('videos');
-      const videosSnapshot = await videosRef.get();
-
-      for (const videoDoc of videosSnapshot.docs) {
-        videos.push({
-          id: videoDoc.id,
-          attackId,
-          levelId,
-          ...videoDoc.data(),
-        });
-      }
-    }
-  }
+  const videos = videosSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
   
   cache.set(cacheKey, {
     data: videos,
