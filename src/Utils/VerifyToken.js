@@ -49,10 +49,10 @@ const verifyToken = async (req, res, next) => {
             console.log('Existing user found:', decodedToken.uid);
             req.userData = userDoc.data();
             
-            // Optional: Update last login timestamp
-            await userRef.update({
-                lastLogin: admin.firestore.FieldValue.serverTimestamp()
-            });
+            // Fire-and-forget — don't block the request for a lastLogin update
+      userRef.update({
+        lastLogin: admin.firestore.FieldValue.serverTimestamp()
+      }).catch(err => console.error('[verifyToken] lastLogin update failed:', err));
         }
         
         next();
