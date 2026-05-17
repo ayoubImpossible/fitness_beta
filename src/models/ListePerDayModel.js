@@ -396,24 +396,27 @@ const getPhasesByMuscle = async (muscleAttacker, forceRefresh = false) => {
   
   try {
     console.log('📥 Fetching phases by muscle:', muscleAttacker);
+    // ✅ Un seul filtre sur 'type' pour éviter l'index composite
+    // Le filtre muscleAttacker est fait en mémoire
     const snapshot = await db.collectionGroup('phases')
       .where('type', '==', 'musculation')
-      .where('muscleAttacker', '==', muscleAttacker)
       .get();
     
-    const data = snapshot.docs.map(doc => ({
-      id: doc.id,
-      path: doc.ref.path,
-      programId: doc.data().programId,
-      ...doc.data()
-    }));
+    const data = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        path: doc.ref.path,
+        programId: doc.data().programId,
+        ...doc.data()
+      }))
+      .filter(phase => phase.muscleAttacker === muscleAttacker); // filtre en mémoire
     
     cache.set(cacheKey, {
       data,
       timestamp: Date.now()
     });
     
-    console.log(`📊 ${snapshot.size} phases (Cache: 12h)`);
+    console.log(`📊 ${data.length} phases for muscle: ${muscleAttacker} (Cache: 12h)`);
     return data;
   } catch (error) {
     console.error('Error fetching phases by muscle:', error);
@@ -429,18 +432,11 @@ const getProgramsByPhaseType = async (type, forceRefresh = false) => {
     const phases = await getPhasesByType(type, forceRefresh);
     
     // Extraire les programIds uniques
-    const programIds = [...new Set(phases.map(phase => phase.programId))];
+    const programIds = new Set(phases.map(phase => phase.programId));
     
-    // Récupérer les programmes
-    const programs = [];
-    for (const programId of programIds) {
-      const program = await getProgramById(programId, forceRefresh);
-      if (program) {
-        programs.push(program);
-      }
-    }
-    
-    return programs;
+    // ✅ Une seule requête (depuis cache) au lieu de N boucles
+    const allPrograms = await getAllPrograms(forceRefresh);
+    return allPrograms.filter(p => programIds.has(p.id));
   } catch (error) {
     console.error('Error fetching programs by phase type:', error);
     throw error;
@@ -455,18 +451,11 @@ const getProgramsByMuscle = async (muscleAttacker, forceRefresh = false) => {
     const phases = await getPhasesByMuscle(muscleAttacker, forceRefresh);
     
     // Extraire les programIds uniques
-    const programIds = [...new Set(phases.map(phase => phase.programId))];
+    const programIds = new Set(phases.map(phase => phase.programId));
     
-    // Récupérer les programmes
-    const programs = [];
-    for (const programId of programIds) {
-      const program = await getProgramById(programId, forceRefresh);
-      if (program) {
-        programs.push(program);
-      }
-    }
-    
-    return programs;
+    // ✅ Une seule requête (depuis cache) au lieu de N boucles
+    const allPrograms = await getAllPrograms(forceRefresh);
+    return allPrograms.filter(p => programIds.has(p.id));
   } catch (error) {
     console.error('Error fetching programs by muscle:', error);
     throw error;
@@ -800,29 +789,94 @@ const deleteVideo = async (programId, phaseId, dayId, videoId) => {
 // ============================================
 
 /**
- * Récupérer la structure complète d'un programme
+ * Récupérer la structure complète d'un programme (Version optimisée sans collectionGroup pour éviter les index manquants)
  */
-const getFullProgramStructure = async (programId) => {
+const getFullProgramStructure = async (programId, forceRefresh = false) => {
+  const cacheKey = getCacheKey('programs', { programId, full: true });
+  const cached = cache.get(cacheKey);
+
+  if (!forceRefresh && isCacheValid(cached, 'programs')) {
+    console.log('✅ Cache hit: getFullProgramStructure', programId);
+    return cached.data;
+  }
+
   const program = await getProgramById(programId);
   
   if (!program) {
     return null;
   }
   
-  const phases = await getPhasesByProgram(programId);
+  console.log(`📥 Fetching full structure for program: ${programId} using nested parallel queries`);
   
-  for (const phase of phases) {
-    phase.days = await getDaysByPhase(programId, phase.id);
+  // 1. Récupérer toutes les phases du programme
+  const phasesSnapshot = await ProgramsRef.doc(programId).collection('phases').get();
+  const phases = phasesSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    days: []
+  })).sort((a, b) => (a.phaseNumber || 0) - (b.phaseNumber || 0));
+
+  // 2. Récupérer tous les jours de toutes les phases en parallèle
+  const daysPromises = phases.map(async (phase) => {
+    const daysSnapshot = await ProgramsRef.doc(programId)
+      .collection('phases')
+      .doc(phase.id)
+      .collection('days')
+      .get();
     
-    for (const day of phase.days) {
-      day.videos = await getVideosByDay(programId, phase.id, day.id);
+    return daysSnapshot.docs.map(doc => ({
+      id: doc.id,
+      phaseId: phase.id,
+      ...doc.data(),
+      videos: []
+    })).sort((a, b) => (a.dayNumber || 0) - (b.dayNumber || 0));
+  });
+
+  const daysArrays = await Promise.all(daysPromises);
+  const days = daysArrays.flat();
+
+  // 3. Récupérer toutes les vidéos de tous les jours en parallèle
+  const videosPromises = days.map(async (day) => {
+    const videosSnapshot = await ProgramsRef.doc(programId)
+      .collection('phases')
+      .doc(day.phaseId)
+      .collection('days')
+      .doc(day.id)
+      .collection('videos')
+      .get();
+    
+    day.videos = videosSnapshot.docs.map(doc => ({
+      id: doc.id,
+      dayId: day.id,
+      ...doc.data()
+    })).sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    return day.videos;
+  });
+
+  const videosArrays = await Promise.all(videosPromises);
+  const videos = videosArrays.flat();
+
+  // Assembler les jours dans leurs phases respectives (les vidéos sont déjà intégrées par référence)
+  const phaseMap = new Map(phases.map(p => [p.id, p]));
+  for (const day of days) {
+    const parentPhase = phaseMap.get(day.phaseId);
+    if (parentPhase) {
+      parentPhase.days.push(day);
     }
   }
   
-  return {
-    ...program,
-    phases
-  };
+  const result = { ...program, phases };
+
+  // ✅ Cache 12h
+  cache.set(cacheKey, {
+    data: result,
+    timestamp: Date.now()
+  });
+
+  console.log(`📊 Assemblé et mis en cache: ${phases.length} phases, ${days.length} jours, ${videos.length} vidéos (Cache: 12h)`);
+  
+  return result;
 };
 
 const getCacheStats = () => {

@@ -58,15 +58,15 @@ const categoriesRef = (typeId) => db.collection('types').doc(typeId).collection(
 const getAllExercises = async (forceRefresh = false) => {
   const cacheKey = getCacheKey('exercises', { all: true });
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getAllExercises');
     return cached.data;
   }
-  
+
   try {
     console.log('📥 Fetching all exercises with collectionGroup...');
-    
+
     // OPTIMISATION: Une seule requête au lieu de N boucles
     const snapshot = await db.collectionGroup('exercises').get();
     const allExercises = snapshot.docs.map(doc => ({
@@ -74,12 +74,12 @@ const getAllExercises = async (forceRefresh = false) => {
       path: doc.ref.path,
       ...doc.data()
     }));
-    
+
     cache.set(cacheKey, {
       data: allExercises,
       timestamp: Date.now()
     });
-    
+
     console.log(`📊 Lectures: ${snapshot.size} exercices (Cache: 12h)`);
     return allExercises;
   } catch (error) {
@@ -92,21 +92,21 @@ const getAllExercises = async (forceRefresh = false) => {
 const getAllExercisesIn = async (typeId, categoryId, forceRefresh = false) => {
   const cacheKey = getCacheKey('exercises', { typeId, categoryId });
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getAllExercisesIn', categoryId);
     return cached.data;
   }
-  
+
   console.log('📥 Fetching exercises for category:', categoryId);
   const snapshot = await categoriesRef(typeId).doc(categoryId).collection('exercises').get();
   const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
+
   cache.set(cacheKey, {
     data,
     timestamp: Date.now()
   });
-  
+
   console.log(`📊 Lectures: ${snapshot.size} exercices (Cache: 12h)`);
   return data;
 };
@@ -123,39 +123,39 @@ const getExercisesOptimized = async (options = {}) => {
     orderDirection = 'desc',
     forceRefresh = false
   } = options;
-  
+
   const cacheKey = getCacheKey('exercises', options);
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getExercisesOptimized');
     return cached.data;
   }
-  
+
   console.log('📥 Fetching exercises with collectionGroup and filters...');
   let query = db.collectionGroup('exercises');
-  
+
   // IMPORTANT: Ajouter typeId et categoryId dans vos documents exercises
   if (typeId) query = query.where('typeId', '==', typeId);
   if (categoryId) query = query.where('categoryId', '==', categoryId);
   if (status) query = query.where('status', '==', status);
   if (difficulty) query = query.where('difficulty', '==', difficulty);
-  
+
   query = query.orderBy(orderBy, orderDirection);
   if (limit) query = query.limit(limit);
-  
+
   const snapshot = await query.get();
-  const data = snapshot.docs.map(doc => ({ 
+  const data = snapshot.docs.map(doc => ({
     id: doc.id,
     path: doc.ref.path,
-    ...doc.data() 
+    ...doc.data()
   }));
-  
+
   cache.set(cacheKey, {
     data,
     timestamp: Date.now()
   });
-  
+
   console.log(`📊 Lectures: ${snapshot.size} exercices (Cache: 12h)`);
   return data;
 };
@@ -164,27 +164,27 @@ const getExercisesOptimized = async (options = {}) => {
 const getExerciseById = async (typeId, categoryId, exerciseId, forceRefresh = false) => {
   const cacheKey = getCacheKey('exercises', { typeId, categoryId, exerciseId });
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getExerciseById');
     return cached.data;
   }
-  
+
   const doc = await categoriesRef(typeId)
     .doc(categoryId)
     .collection('exercises')
     .doc(exerciseId)
     .get();
-  
+
   const data = doc.exists ? { id: doc.id, ...doc.data() } : null;
-  
+
   if (data) {
     cache.set(cacheKey, {
       data,
       timestamp: Date.now()
     });
   }
-  
+
   return data;
 };
 
@@ -197,27 +197,27 @@ const getExerciseByIdinType = async (typeId, categoryId, exerciseId) => {
 const getExerciseByid = async (categoryId, exerciseId, forceRefresh = false) => {
   const cacheKey = getCacheKey('exercises', { categoryId, exerciseId });
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getExerciseByid');
     return cached.data;
   }
-  
+
   const exerciseRef = db.collection('categories')
     .doc(categoryId)
     .collection('exercises')
     .doc(exerciseId);
-  
+
   const doc = await exerciseRef.get();
   const data = doc.exists ? doc.data() : null;
-  
+
   if (data) {
     cache.set(cacheKey, {
       data,
       timestamp: Date.now()
     });
   }
-  
+
   return data;
 };
 
@@ -225,15 +225,15 @@ const getExerciseByid = async (categoryId, exerciseId, forceRefresh = false) => 
 const getAllMobilityExercice = async (forceRefresh = false) => {
   const cacheKey = getCacheKey('exercises', { mobility: true });
   const cached = cache.get(cacheKey);
-  
+
   if (!forceRefresh && isCacheValid(cached, 'exercises')) {
     console.log('✅ Cache hit: getAllMobilityExercice');
     return cached.data;
   }
-  
+
   try {
     console.log('📥 Fetching mobility exercises with collectionGroup...');
-    
+
     // AVANT: Boucle sur categories puis exercices (N×M lectures)
     // APRÈS: Une seule requête collection group
     const snapshot = await db.collectionGroup('exercices').get();
@@ -242,12 +242,12 @@ const getAllMobilityExercice = async (forceRefresh = false) => {
       path: doc.ref.path,
       ...doc.data()
     }));
-    
+
     cache.set(cacheKey, {
       data: allExercises,
       timestamp: Date.now()
     });
-    
+
     console.log(`📊 Lectures: ${snapshot.size} exercices (Cache: 12h)`);
     return allExercises;
   } catch (error) {
@@ -265,7 +265,7 @@ const addExerciseToCategory = async (typeId, categoryId, exerciseData) => {
   const typeRef = db.collection('types').doc(typeId);
   const categoryRef = typeRef.collection('categories').doc(categoryId);
   const exercisesRef = categoryRef.collection('exercises');
-  
+
   // IMPORTANT: Ajouter typeId et categoryId pour collection group
   const dataToAdd = {
     ...exerciseData,
@@ -273,12 +273,12 @@ const addExerciseToCategory = async (typeId, categoryId, exerciseData) => {
     categoryId,  // Nécessaire pour filtrer avec collection group
     createdAt: new Date()
   };
-  
+
   const exerciseDoc = await exercisesRef.add(dataToAdd);
-  
+
   // Invalide le cache après ajout
   invalidateCache('exercises');
-  
+
   console.log('✅ Exercise added, cache invalidated');
   return exerciseDoc.id;
 };
@@ -298,10 +298,10 @@ const updateExerciseInCategory = async (typeId, categoryId, exerciseId, updatedD
     categoryId,  // S'assure que categoryId est présent
     updatedAt: new Date()
   });
-  
+
   // Invalide le cache après mise à jour
   invalidateCache('exercises');
-  
+
   console.log('✅ Exercise updated, cache invalidated');
 };
 
@@ -314,10 +314,10 @@ const deleteExerciseFromDatabase = async (typeId, categoryId, exerciseId) => {
     .collection('exercises')
     .doc(exerciseId)
     .delete();
-  
+
   // Invalide le cache après suppression
   invalidateCache('exercises');
-  
+
   console.log('✅ Exercise deleted, cache invalidated');
 };
 
@@ -333,24 +333,24 @@ const searchExercisesByName = async (searchQuery, options = {}) => {
     limit = 50,
     forceRefresh = false
   } = options;
-  
+
   const cacheKey = getCacheKey('exercises-search', { searchQuery, ...options });
   const cached = cache.get(cacheKey);
-  
+
   // Cache plus court pour les recherches (30 min)
   const searchCacheDuration = 30 * 60 * 1000;
   if (!forceRefresh && cached && (Date.now() - cached.timestamp < searchCacheDuration)) {
     console.log('✅ Cache hit: searchExercisesByName');
     return cached.data;
   }
-  
+
   console.log('📥 Searching exercises...');
   let query = db.collectionGroup('exercises');
-  
+
   // Filtres optionnels
   if (typeId) query = query.where('typeId', '==', typeId);
   if (categoryId) query = query.where('categoryId', '==', categoryId);
-  
+
   // Recherche par nom (startsWith)
   if (searchQuery) {
     const searchEnd = searchQuery.replace(/.$/, c => String.fromCharCode(c.charCodeAt(0) + 1));
@@ -358,21 +358,21 @@ const searchExercisesByName = async (searchQuery, options = {}) => {
       .where('name', '>=', searchQuery)
       .where('name', '<', searchEnd);
   }
-  
+
   query = query.limit(limit);
-  
+
   const snapshot = await query.get();
-  const data = snapshot.docs.map(doc => ({ 
+  const data = snapshot.docs.map(doc => ({
     id: doc.id,
     path: doc.ref.path,
-    ...doc.data() 
+    ...doc.data()
   }));
-  
+
   cache.set(cacheKey, {
     data,
     timestamp: Date.now()
   });
-  
+
   console.log(`📊 Trouvé: ${snapshot.size} exercices`);
   return data;
 };
@@ -388,14 +388,14 @@ const getCacheStats = () => {
     totalItems: 0,
     config: CACHE_CONFIG
   };
-  
+
   for (const [key, value] of cache.entries()) {
     const collectionName = key.split('_')[0];
     const duration = getCacheDuration(collectionName);
     const age = Date.now() - value.timestamp;
     const isValid = age < duration;
     const remainingMs = duration - age;
-    
+
     stats.keys.push({
       key,
       collection: collectionName,
@@ -405,20 +405,20 @@ const getCacheStats = () => {
       cacheDurationMs: duration,
       isValid
     });
-    
+
     if (Array.isArray(value.data)) {
       stats.totalItems += value.data.length;
     } else {
       stats.totalItems += 1;
     }
   }
-  
+
   return stats;
 };
 
 const clearExpiredCache = () => {
   let clearedCount = 0;
-  
+
   for (const [key, value] of cache.entries()) {
     const collectionName = key.split('_')[0];
     if (!isCacheValid(value, collectionName)) {
@@ -426,7 +426,7 @@ const clearExpiredCache = () => {
       clearedCount++;
     }
   }
-  
+
   console.log(`🗑️ ${clearedCount} entrées de cache expirées supprimées`);
   return clearedCount;
 };
@@ -450,7 +450,7 @@ module.exports = {
   getExerciseByid,
   deleteExerciseFromDatabase,
   getAllMobilityExercice,
-  
+
   // Nouvelles fonctions optimisées
   getAllExercises,
   getExercisesOptimized,

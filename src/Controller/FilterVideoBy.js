@@ -90,11 +90,41 @@ const getAllVideosHandler = async (req, res) => {
     if (videos && videos.length > 0) {
       res.status(200).json(videos); 
     } else {
-      res.status(404).json({ message: "No categories found" }); 
+      res.status(404).json({ message: "No videos found" }); 
     }
   } catch (error) {
-    console.error("Error in getCategories controller:", error);
-    res.status(500).json({ message: "An error occurred while fetching categories." });
+    console.error("Error in getAllVideosHandler controller:", error);
+    res.status(500).json({ message: "An error occurred while fetching videos." });
+  }
+};
+
+const deleteVideoHandler = async (req, res) => {
+  try {
+    const { path, id } = req.query; // Expecting document path
+    if (!path) return res.status(400).json({ message: "Path is required" });
+    
+    // The model deleteVideo takes (collectionPath, videoId)
+    // path is 'types/.../videos/videoId'
+    const collectionPath = path.substring(0, path.lastIndexOf('/'));
+    const { deleteVideo } = require("../models/getVideoBy");
+    await deleteVideo(collectionPath, id);
+    res.json({ success: true, message: "Video deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateVideoHandler = async (req, res) => {
+  try {
+    const { path, id, data } = req.body;
+    if (!path) return res.status(400).json({ message: "Path is required" });
+    
+    const collectionPath = path.substring(0, path.lastIndexOf('/'));
+    const { updateVideo } = require("../models/getVideoBy");
+    await updateVideo(collectionPath, id, data);
+    res.json({ success: true, message: "Video updated" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -104,6 +134,8 @@ const getAllVideosHandler = async (req, res) => {
     getAllEquipment,
     getAllDuration,
     getAllVideosHandler,
+    deleteVideoHandler,
+    updateVideoHandler,
     getAllDuration_2,
     getAllEquipment_2,getAllVideoByeq,getAllVideoBylevel
   };

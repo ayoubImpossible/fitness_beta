@@ -1,0 +1,8 @@
+.header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 16px;
+  margin-bottom: 28px;
+}
+.title { font-size: 26px; font-weight: 700; }
+.subtitle { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.action { flex-shrink: 0; }

@@ -1,0 +1,70 @@
+.searchRow { margin-bottom: 16px; }
+.searchWrap { position: relative; max-width: 400px; }
+.searchIcon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search {
+  width: 100%; padding: 10px 14px 10px 36px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 14px; outline: none;
+}
+.search:focus { border-color: var(--accent); }
+
+.thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+.noImg { width: 52px; height: 52px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.name { font-weight: 600; }
+.muted { color: var(--muted); font-size: 13px; }
+
+.badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.beginner { background: rgba(74,222,128,0.12); color: var(--success); }
+.intermediate { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.hard { background: rgba(248,113,113,0.12); color: var(--danger); }
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.playBtn, .editBtn, .deleteBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.playBtn:hover { background: rgba(192, 132, 252, 0.1); color: var(--accent); border-color: var(--accent); }
+.editBtn:hover { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: #38bdf8; }
+.deleteBtn:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.videoWrap { display: flex; flex-direction: column; gap: 16px; }
+.video { width: 100%; border-radius: 10px; background: #000; max-height: 340px; }
+.videoMeta { display: flex; flex-direction: column; gap: 8px; }
+.metaRow { display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.metaLabel { color: var(--muted); }

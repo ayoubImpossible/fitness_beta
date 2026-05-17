@@ -1,0 +1,18 @@
+.searchRow { margin-bottom: 16px; }
+.searchWrap { position: relative; max-width: 400px; }
+.searchIcon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search { width: 100%; padding: 10px 14px 10px 36px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 14px; outline: none; }
+.search:focus { border-color: var(--accent); }
+.avatarContainer { position: relative; width: 40px; height: 40px; }
+
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
+.avatarFallback { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+.name { font-weight: 600; }
+.email { color: var(--muted); font-size: 13px; }
+.muted { color: var(--muted); font-size: 13px; }
+.badge { background: rgba(192,132,252,0.12); color: var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+.placeholder { text-align: center; padding: 48px 24px; }
+.placeholderTitle { font-size: 24px; margin-bottom: 16px; }
+.placeholderText { color: var(--muted); font-size: 14px; margin-bottom: 8px; line-height: 1.6; }
+.placeholderText code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; color: var(--accent); font-size: 13px; }

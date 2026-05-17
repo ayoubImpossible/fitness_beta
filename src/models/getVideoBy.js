@@ -449,14 +449,13 @@ const getAllEquipmentTypes_2 = async (forceRefresh = false) => {
   }
   
   try {
-    console.log('📥 Fetching all equipment types...');
-    const snapshot = await db.collectionGroup('videos').get(); 
+    console.log('📥 Fetching all equipment types using cached videos...');
+    const allVideos = await getAllVid(forceRefresh); 
     const equipmentSet = new Set();
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.equipment) {
-        equipmentSet.add(data.equipment);
+    allVideos.forEach((video) => {
+      if (video.equipment) {
+        equipmentSet.add(video.equipment);
       }
     });
 
@@ -475,7 +474,7 @@ const getAllEquipmentTypes_2 = async (forceRefresh = false) => {
   }
 };
 
-// OPTIMISÉE: Tous les types de difficulté avec cache 7 jours
+// OPTIMISÉE: Tous les types de difficulty avec cache 7 jours
 const getAllDurationsTypes_2 = async (forceRefresh = false) => {
   const cacheKey = getCacheKey('videos-metadata', { allDifficultyTypes: true });
   const cached = cache.get(cacheKey);
@@ -486,14 +485,13 @@ const getAllDurationsTypes_2 = async (forceRefresh = false) => {
   }
   
   try {
-    console.log('📥 Fetching all difficulty types...');
-    const snapshot = await db.collectionGroup('videos').get();  
+    console.log('📥 Fetching all difficulty types using cached videos...');
+    const allVideos = await getAllVid(forceRefresh);  
     const durationSet = new Set();
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.difficulty) {
-        durationSet.add(data.difficulty);
+    allVideos.forEach((video) => {
+      if (video.difficulty) {
+        durationSet.add(video.difficulty);
       }
     });
 

@@ -1,6 +1,16 @@
 const { bucket, db } = require('../Firebase/firebaseAdmin');
 const { v4: uuidv4 } = require('uuid'); // For unique filenames
 
+// ============================================
+// CACHE CONFIGURATION FOR LEVELS & VIDEOS
+// ============================================
+const LEVELS_CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
+const levelsCache = new Map();
+
+const isLevelsCacheValid = (cacheEntry) => {
+  if (!cacheEntry) return false;
+  return Date.now() - cacheEntry.timestamp < LEVELS_CACHE_DURATION;
+};
 
 // Function to upload an image to Firebase Storage
 const uploadImage = (file) => {
@@ -173,8 +183,18 @@ const deleteVideoFromStorage = async (videoUrl) => {
   }
 };
 
-//get all levels with his videos
-const getLevelsWithVideos = async (typeId,categoryId, exerciseId,atackId) => {
+//get all levels with his videos (Optimized with 12h Cache)
+const getLevelsWithVideos = async (typeId, categoryId, exerciseId, atackId, forceRefresh = false) => {
+  const cacheKey = `${typeId}_${categoryId}_${exerciseId}_${atackId}`;
+  const cached = levelsCache.get(cacheKey);
+
+  if (!forceRefresh && isLevelsCacheValid(cached)) {
+    console.log('✅ Cache hit: getLevelsWithVideos', cacheKey);
+    return cached.data;
+  }
+
+  console.log('📥 Fetching levels and videos for exercise:', exerciseId);
+
   const levelsRef = db.collection('types').doc(typeId)
                              .collection('categories').doc(categoryId)
                              .collection('exercises').doc(exerciseId)
@@ -200,6 +220,13 @@ const getLevelsWithVideos = async (typeId,categoryId, exerciseId,atackId) => {
       videos: videos
     });
   }
+
+  levelsCache.set(cacheKey, {
+    data: levels,
+    timestamp: Date.now()
+  });
+
+  console.log(`📊 Lectures: ${levels.length} levels fetched (Cache: 12h)`);
   return levels;
 };
 

@@ -1,0 +1,71 @@
+.list { display: flex; flex-direction: column; gap: 16px; }
+.empty { text-align: center; color: var(--muted); padding: 32px; }
+.emptyInner { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+.progCard { padding: 0 !important; overflow: hidden; }
+
+.progHeader {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.expandBtn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px; cursor: pointer;
+  color: var(--muted); display: flex; align-items: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.expandBtn:hover { color: var(--accent); border-color: var(--accent); }
+.progInfo { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.progName { font-size: 16px; font-weight: 700; }
+.progDesc { font-size: 13px; color: var(--muted); }
+.progActions { display: flex; gap: 8px; }
+
+.phases { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+.phase {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.phaseHeader {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.phaseType {
+  background: rgba(192,132,252,0.12); color: var(--accent);
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.phaseName { flex: 1; font-weight: 600; font-size: 14px; }
+.phaseActions { display: flex; gap: 6px; }
+
+.days { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.dayGroup { display: flex; flex-direction: column; gap: 6px; }
+.day {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.dayNum { font-size: 12px; font-weight: 700; color: var(--accent); }
+.dayTitle { flex: 1; font-size: 13px; margin-left: 10px; }
+.dayActions { display: flex; gap: 8px; align-items: center; }
+
+/* Video List Styles */
+.videoList { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.videoItem { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px dashed var(--border); }
+.vidThumb { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; background: var(--surface); }
+.vidInfo { flex: 1; display: flex; flex-direction: column; }
+.vidTitle { font-size: 12px; font-weight: 600; color: var(--text); }
+.vidMeta { font-size: 10px; color: var(--muted); }
+.deleteVid { padding: 4px; color: var(--muted); background: transparent; border: none; cursor: pointer; transition: color 0.2s; display: flex; }
+.deleteVid:hover { color: var(--danger); }
+
+/* Form helpers */
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.fileInputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+.fileBox { display: flex; flex-direction: column; gap: 6px; }
+.fileBox label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.fileBox input { font-size: 12px; color: var(--text); background: var(--surface); padding: 4px; border-radius: 4px; border: 1px solid var(--border); }
+
+.formGrid { display: flex; flex-direction: column; gap: 16px; }
+.modalFooter { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }

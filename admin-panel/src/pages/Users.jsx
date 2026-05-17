@@ -70,10 +70,25 @@ export default function Users() {
                 : display.map(u => (
                   <Tr key={u.uid}>
                     <Td>
-                      {u.photoURL
-                        ? <img src={u.photoURL} alt={u.displayName} className={styles.avatar} />
-                        : <div className={styles.avatarFallback}>{(u.displayName || u.email || '?')[0].toUpperCase()}</div>
-                      }
+                      <div className={styles.avatarContainer}>
+                        {u.photoURL && (
+                          <img 
+                            src={u.photoURL} 
+                            alt={u.displayName} 
+                            className={styles.avatar} 
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        )}
+                        <div 
+                          className={styles.avatarFallback} 
+                          style={{ display: u.photoURL ? 'none' : 'flex' }}
+                        >
+                          {(u.displayName || u.email || '?')[0].toUpperCase()}
+                        </div>
+                      </div>
                     </Td>
                     <Td><span className={styles.name}>{u.displayName || u.fullName || '—'}</span></Td>
                     <Td><span className={styles.email}>{u.email}</span></Td>
