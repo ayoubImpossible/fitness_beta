@@ -59,18 +59,29 @@ const categorieRef = (typeId) => db.collection('types').doc(typeId).collection('
 // FONCTIONS OPTIMISÉES AVEC COLLECTION GROUP
 // ============================================
 
-// NOUVELLE: Récupère TOUTES les catégories avec collection group + cache
+
+
+
+
+
+
+
+
+
+
+
+// NOUVELLE: Récupère TOUTES les catégories avec collection group + cache 
 const getAllCat = async (forceRefresh = false) => {
   const cacheKey = getCacheKey('categories', { all: true });
   const cached = cache.get(cacheKey);
   
   if (!forceRefresh && isCacheValid(cached, 'categories')) {
-    console.log('✅ Cache hit: getAllCat');
+    console.log(' Cache hit: getAllCat');
     return cached.data;
   }
   
   try {
-    console.log('📥 Fetching all categories with collectionGroup...');
+    console.log(' Fetching all categories with collectionGroup...');
     
     // AVANT: Boucle sur tous les types (N lectures)
     // APRÈS: Une seule requête collection group
@@ -86,13 +97,19 @@ const getAllCat = async (forceRefresh = false) => {
       timestamp: Date.now()
     });
     
-    console.log(`📊 Lectures: ${snapshot.size} documents (Cache: 24h)`);
+    console.log(`Lectures: ${snapshot.size} documents (Cache: 24h)`);
     return allCategories;
   } catch (error) {
     console.error("Error fetching categories:", error);
     return [];
   }
 };
+
+
+
+
+
+
 
 // AMÉLIORÉE: Récupère les catégories d'un type spécifique avec cache
 const getAllCategories = async (typeId, forceRefresh = false) => {
@@ -244,10 +261,41 @@ const deleteCategory = async (id) => {
   console.log('✅ Category deleted, cache invalidated');
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ============================================
 // FONCTIONS COMPLEXES (avec cache adaptatif)
 // ============================================
-
+///A optimiseé!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 const getCategoryWithExercisesLevelsAndVideos = async (typeId, categoryId, forceRefresh = false) => {
   const cacheKey = getCacheKey('category-full', { typeId, categoryId });
   const cached = cache.get(cacheKey);
@@ -257,7 +305,8 @@ const getCategoryWithExercisesLevelsAndVideos = async (typeId, categoryId, force
     console.log('✅ Cache hit: getCategoryWithExercisesLevelsAndVideos');
     return cached.data;
   }
-  
+
+  // 1 read — category doc
   const categoryRef = db.collection('types').doc(typeId).collection('categories').doc(categoryId);
   const categorySnapshot = await categoryRef.get();
 
@@ -265,35 +314,40 @@ const getCategoryWithExercisesLevelsAndVideos = async (typeId, categoryId, force
     throw new Error('Category not found');
   }
 
-  const categoryData = categorySnapshot.data();
+  // 3 parallel reads instead of N×M nested loops
+  const [exercisesSnap, levelsSnap, videosSnap] = await Promise.all([
+    db.collectionGroup('exercises').where('categorieId', '==', categoryId).get(),
+    db.collectionGroup('levels').where('categorieId', '==', categoryId).get(),
+    db.collectionGroup('videos').where('categorieId', '==', categoryId).get(),
+  ]);
 
-  const exercisesSnapshot = await categoryRef.collection('exercises').get();
-  const exercises = await Promise.all(exercisesSnapshot.docs.map(async (exerciseDoc) => {
-    const exerciseData = exerciseDoc.data();
-    const levelsSnapshot = await exerciseDoc.ref.collection('levels').get();
-    const levels = await Promise.all(levelsSnapshot.docs.map(async (levelDoc) => {
-      const levelData = levelDoc.data();
-      const videosSnapshot = await levelDoc.ref.collection('videos').get();
-      const videos = videosSnapshot.docs.map(videoDoc => ({
-        id: videoDoc.id,
-        ...videoDoc.data(),
-      }));
-      return {
-        id: levelDoc.id,
-        ...levelData,
-        videos,
-      };
-    }));
-    return {
-      id: exerciseDoc.id,
-      ...exerciseData,
-      levels,
-    };
+  // Build lookup maps in memory — 0 extra reads
+  const videosByLevel = {};
+  videosSnap.docs.forEach(doc => {
+    const d = doc.data();
+    if (!videosByLevel[d.levelId]) videosByLevel[d.levelId] = [];
+    videosByLevel[d.levelId].push({ id: doc.id, ...d });
+  });
+
+  const levelsByExercise = {};
+  levelsSnap.docs.forEach(doc => {
+    const d = doc.data();
+    if (!levelsByExercise[d.exerciceId]) levelsByExercise[d.exerciceId] = [];
+    levelsByExercise[d.exerciceId].push({
+      id: doc.id, ...d,
+      videos: videosByLevel[doc.id] || []
+    });
+  });
+
+  const exercises = exercisesSnap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    levels: levelsByExercise[doc.id] || []
   }));
 
   const result = {
     id: categorySnapshot.id,
-    ...categoryData,
+    ...categorySnapshot.data(),
     exercises,
   };
   
@@ -303,9 +357,25 @@ const getCategoryWithExercisesLevelsAndVideos = async (typeId, categoryId, force
     timestamp: Date.now()
   });
   
-  console.log(`📊 Catégorie complète récupérée (Cache: 12h)`);
+  console.log(`📊 Catégorie complète récupérée: ${exercises.length} exercises, ${levelsSnap.size} levels, ${videosSnap.size} videos (Cache: 12h)`);
   return result;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const getVideoCountByCategoryId = async (categoryId, forceRefresh = false) => {
   const cacheKey = getCacheKey('video-count', { categoryId });
