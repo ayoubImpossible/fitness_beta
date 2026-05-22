@@ -282,7 +282,11 @@ const addLevelHandler = async (req, res) => {
 const getVideoByLevelHandler = async (req, res) => {
   try {
     const { typeId, categoryId, exerciseId } = req.params;
-    const { Level } = req.query; // 🔥 Use query instead of req.body
+    const { Level } = req.query;
+
+    if (!Level) {
+      return res.status(400).json({ error: 'Level query parameter is required' });
+    }
 
     const videos = await getAllVideosByL(typeId, categoryId, exerciseId, Level);
 
