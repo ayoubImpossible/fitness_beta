@@ -31,6 +31,8 @@ const isCacheValid = (cacheEntry, collectionName) => {
   return Date.now() - cacheEntry.timestamp < duration;
 };
 
+const MUSCU_PHASES_KEY = getCacheKey('phases', { muscuPhases: true });
+
 const invalidateCache = (collectionName = null) => {
   if (!collectionName) {
     cache.clear();
@@ -41,6 +43,8 @@ const invalidateCache = (collectionName = null) => {
         cache.delete(key);
       }
     }
+    // Muscle tiles combine phases + program names → also drop on program changes
+    if (collectionName === 'programs') cache.delete(MUSCU_PHASES_KEY);
     console.log('🗑️ Cache invalidé pour:', collectionName);
   }
 };
@@ -793,9 +797,9 @@ const deleteVideo = async (programId, phaseId, dayId, videoId) => {
  * Used by the app's "Train by muscle" tiles (was: N full-structure calls).
  */
 const getMuscuPhasesLight = async (forceRefresh = false) => {
-  const cacheKey = getCacheKey('programs', { muscuPhases: true });
+  const cacheKey = MUSCU_PHASES_KEY; // 'phases_…' → cleared by invalidateCache('phases') too
   const cached = cache.get(cacheKey);
-  if (!forceRefresh && isCacheValid(cached, 'programs')) return cached.data;
+  if (!forceRefresh && isCacheValid(cached, 'phases')) return cached.data;
 
   const programs = await getAllPrograms(forceRefresh);
   const perProgram = await Promise.all(programs.map(async (program) => {
