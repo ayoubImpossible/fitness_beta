@@ -91,6 +91,14 @@ const getAllCat = async (forceRefresh = false) => {
       path: doc.ref.path,
       ...doc.data()
     }));
+
+    // Include the video count so the app doesn't need one request per category
+    await Promise.all(allCategories.map(async (cat) => {
+      try {
+        const { videoCount } = await getVideoCountByCategoryId(cat.id);
+        cat.videoCount = videoCount;
+      } catch (_) { /* app falls back to /getCountAllVideos */ }
+    }));
     
     cache.set(cacheKey, {
       data: allCategories,
@@ -389,13 +397,15 @@ const getVideoCountByCategoryId = async (categoryId, forceRefresh = false) => {
   try {
     // BEFORE: 6 nested loops (types → categories → exercises → atacks → levels → videos) = ~35 reads
     // AFTER:  single collectionGroup query filtered by categorieId = 1 read
-    const videosSnapshot = await db.collectionGroup('videos')
+    // Aggregation query: billed 1 read per 1000 matches instead of 1 per video
+    const countSnapshot = await db.collectionGroup('videos')
       .where('categorieId', '==', categoryId)
+      .count()
       .get();
 
     const result = {
       categoryId,
-      videoCount: videosSnapshot.size
+      videoCount: countSnapshot.data().count
     };
     
     cache.set(cacheKey, {

@@ -34,6 +34,31 @@ app.use(cookieParser());
 
 app.disable('x-powered-by');
 
+// ─── CDN caching for public, read-only content ───────────────────────────────
+// The in-memory caches in the models don't survive Vercel serverless restarts,
+// so let Vercel's edge cache serve these GETs instead. User-specific routes
+// (saved, profile, plans, workouts by uid, AI, admin) are NOT listed here.
+const PUBLIC_GET_CACHE = [
+  // [path regex, seconds fresh at the edge]
+  [/^\/api\/categorie\/(all|getCountAllVideos\/[^/]+)$/, 3600],
+  [/^\/api\/types\/getTypes$/, 3600],
+  [/^\/api\/Bytime\/getAll(Equipment|Duration)$/, 3600],
+  [/^\/api\/atack\/getAllVideoByAtackMuscle$/, 3600],
+  [/^\/api\/exercises\/type\/[^/]+\/categories\/[^/]+$/, 3600],
+  // contain like counts → shorter
+  [/^\/api\/programs(\/muscu-phases|\/[^/]+\/full)?$/, 300],
+  [/^\/api\/Workouts\/getPrepareExerciceByPosition$/, 300],
+];
+app.use((req, res, next) => {
+  if (req.method === 'GET' && req.query.refresh !== 'true') {
+    const hit = PUBLIC_GET_CACHE.find(([re]) => re.test(req.path));
+    if (hit) {
+      res.set('Cache-Control', `public, max-age=0, s-maxage=${hit[1]}, stale-while-revalidate=86400`);
+    }
+  }
+  next();
+});
+
 app.use('/api/exercises', exerciseRoutes);
 
 app.use('/api/users', userRoutes);
@@ -46,7 +71,7 @@ app.use('/api/Plans', plansRouter);
 app.use('/api/Workouts', workoutsRouter);
 app.use('/api/protected', protectedRoutes);
 app.use('/api', savedcategoryRouter);
-app.use('api/like', likePlan);
+app.use('/api/like', likePlan);
 app.use('/api/profile', profileRouter);
 app.use('/api', searchRouter)
 app.use('/api/Ai', AiRouter);

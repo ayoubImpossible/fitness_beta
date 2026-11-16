@@ -789,6 +789,33 @@ const deleteVideo = async (programId, phaseId, dayId, videoId) => {
 // ============================================
 
 /**
+ * Musculation phases of every program, WITHOUT days/videos.
+ * Used by the app's "Train by muscle" tiles (was: N full-structure calls).
+ */
+const getMuscuPhasesLight = async (forceRefresh = false) => {
+  const cacheKey = getCacheKey('programs', { muscuPhases: true });
+  const cached = cache.get(cacheKey);
+  if (!forceRefresh && isCacheValid(cached, 'programs')) return cached.data;
+
+  const programs = await getAllPrograms(forceRefresh);
+  const perProgram = await Promise.all(programs.map(async (program) => {
+    const snap = await ProgramsRef.doc(program.id)
+      .collection('phases')
+      .where('type', '==', 'musculation')
+      .get();
+    return snap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(phase => phase.muscleAttacker)
+      .sort((a, b) => (a.phaseNumber || 0) - (b.phaseNumber || 0))
+      .map(phase => ({ ...phase, programId: program.id, programName: program.name }));
+  }));
+
+  const data = perProgram.flat();
+  cache.set(cacheKey, { data, timestamp: Date.now() });
+  return data;
+};
+
+/**
  * Récupérer la structure complète d'un programme (Version optimisée sans collectionGroup pour éviter les index manquants)
  */
 const getFullProgramStructure = async (programId, forceRefresh = false) => {
@@ -1003,6 +1030,7 @@ module.exports = {
   
   // Utilitaires
   getFullProgramStructure,
+  getMuscuPhasesLight,
   invalidateCache,
   getCacheStats,
   clearExpiredCache,

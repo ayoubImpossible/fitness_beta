@@ -24,6 +24,16 @@ const getAllPrograms = async (req, res) => {
   }
 };
 
+const getMuscuPhases = async (req, res) => {
+  try {
+    const phases = await programService.getMuscuPhasesLight(req.query.refresh === 'true');
+    res.json({ success: true, count: phases.length, data: phases });
+  } catch (error) {
+    console.error('Error in getMuscuPhases:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la récupération des phases' });
+  }
+};
+
 const getProgramById = async (req, res) => {
   try {
     const { programId } = req.params;
@@ -765,6 +775,7 @@ const deleteVideo = async (req, res) => {
 // ============================================
 
 module.exports = {
+  getMuscuPhases,
   // Program
   getAllPrograms,
   getProgramById,

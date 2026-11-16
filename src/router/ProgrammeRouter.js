@@ -12,6 +12,7 @@ const router = express.Router();
 // PROGRAM ROUTES
 // ============================================
 router.get('/programs', programController.getAllPrograms);
+router.get('/programs/muscu-phases', programController.getMuscuPhases);
 router.get('/programs/:programId', programController.getProgramById);
 router.get('/programs/:programId/full', programController.getFullProgramStructure);
 router.get('/programs/by-type/:type', programController.getProgramsByPhaseType);
